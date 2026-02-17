@@ -37,7 +37,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } elseif ($user['status'] === 'banned') {
                 $errors[] = t('account_banned');
             } else {
-                // Regenerate session ID to prevent fixation
                 session_regenerate_id(true);
 
                 $_SESSION[SESS_USER_ID]  = $user['id'];
@@ -121,7 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </label>
         <input type="email" name="email"
                value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"
-               class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+               class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white text-gray-800"
                placeholder="eleve@example.ma" required autofocus>
       </div>
 
@@ -131,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <?= t('password') ?>
         </label>
         <input type="password" name="password"
-               class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+               class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white text-gray-800"
                placeholder="Votre mot de passe" required>
       </div>
 
@@ -141,11 +140,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?= t('login') ?>
       </button>
     </form>
-
-    <!-- Demo credentials hint -->
-    <div class="mt-5 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700">
-      <strong>Admin demo:</strong> admin@mazar.ma / Admin@1234
-    </div>
 
     <div class="flex justify-center gap-3 mt-5">
       <?php foreach(['ar','fr','en'] as $l): ?>

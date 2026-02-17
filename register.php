@@ -6,22 +6,28 @@ require_once __DIR__ . '/includes/functions.php';
 // Already logged in?
 if (!empty($_SESSION[SESS_USER_ID])) redirect('student/dashboard.php');
 
-$lang   = getCurrentLang();
-$dir    = getDirection();
-$levels = getAllLevels();
-$errors = [];
-$formData = ['full_name'=>'','email'=>'','grade_level_id'=>''];
+$lang     = getCurrentLang();
+$dir      = getDirection();
+$levels   = getAllLevels();
+$errors   = [];
+$formData = ['full_name' => '', 'email' => '', 'grade_level_id' => ''];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!verifyCsrf()) { $errors[] = 'Invalid request. Please try again.'; }
-    else {
-        $fullName   = trim($_POST['full_name']  ?? '');
-        $email      = trim($_POST['email']       ?? '');
-        $password   = $_POST['password']          ?? '';
-        $password2  = $_POST['confirm_password']  ?? '';
-        $gradeId    = (int)($_POST['grade_level_id'] ?? 0);
+    if (!verifyCsrf()) {
+        $errors[] = 'Invalid request. Please try again.';
+    } else {
+        $fullName  = trim($_POST['full_name']       ?? '');
+        $email     = trim($_POST['email']            ?? '');
+        $password  = $_POST['password']              ?? '';
+        $password2 = $_POST['confirm_password']      ?? '';
+        $gradeId   = (int)($_POST['grade_level_id']  ?? 0);
 
-        $formData = compact('fullName','email','gradeId') + ['full_name'=>$fullName,'grade_level_id'=>$gradeId];
+        // Preserve form data on error
+        $formData = [
+            'full_name'      => $fullName,
+            'email'          => $email,
+            'grade_level_id' => $gradeId,
+        ];
 
         // Validation
         if (!$fullName || !$email || !$password || !$gradeId) {
@@ -33,13 +39,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($password !== $password2) {
             $errors[] = t('pass_mismatch');
         } else {
-            $db = getDB();
+            $db       = getDB();
             $existing = $db->prepare("SELECT id FROM users WHERE email = ?");
             $existing->execute([$email]);
             if ($existing->fetch()) {
                 $errors[] = t('email_taken');
             } else {
-                $hash = password_hash($password, PASSWORD_BCRYPT, ['cost'=>12]);
+                $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
                 $db->prepare(
                     "INSERT INTO users (full_name, email, password, grade_level_id, role, xp_points, level)
                      VALUES (?,?,?,?,'student',0,1)"
@@ -71,14 +77,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <style>
-    body { font-family: <?= $lang==='ar' ? "'Cairo'" : "'Poppins'" ?>, sans-serif; }
+    body { font-family: <?= $lang === 'ar' ? "'Cairo'" : "'Poppins'" ?>, sans-serif; }
     .gradient-bg { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); }
-    .input-field { @apply w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800 bg-white text-sm transition; }
   </style>
 </head>
 <body class="gradient-bg min-h-screen flex items-center justify-center py-12 px-4">
 
 <div class="w-full max-w-md">
+
   <!-- Logo -->
   <div class="text-center mb-8">
     <a href="/" class="inline-flex items-center gap-2">
@@ -93,12 +99,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <!-- Card -->
   <div class="bg-white rounded-3xl shadow-2xl p-8">
     <h1 class="text-2xl font-black text-gray-900 mb-1"><?= t('register_title') ?></h1>
-    <p class="text-gray-500 text-sm mb-6"><?= t('have_account') ?> <a href="login.php" class="text-blue-600 font-semibold hover:underline"><?= t('login') ?></a></p>
+    <p class="text-gray-500 text-sm mb-6">
+      <?= t('have_account') ?>
+      <a href="login.php" class="text-blue-600 font-semibold hover:underline"><?= t('login') ?></a>
+    </p>
 
     <!-- Errors -->
     <?php if ($errors): ?>
     <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-5">
-      <?php foreach($errors as $e): ?>
+      <?php foreach ($errors as $e): ?>
       <p class="text-red-600 text-sm flex items-center gap-2">
         <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0"></i>
         <?= htmlspecialchars($e) ?>
@@ -113,35 +122,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <!-- Full Name -->
       <div class="mb-4">
         <label class="block text-sm font-semibold text-gray-700 mb-2">
-          <i data-lucide="user" class="w-4 h-4 inline <?= $dir==='rtl'?'ml-1':'mr-1' ?>"></i>
+          <i data-lucide="user" class="w-4 h-4 inline <?= $dir === 'rtl' ? 'ml-1' : 'mr-1' ?>"></i>
           <?= t('full_name') ?>
         </label>
-        <input type="text" name="full_name"
-               value="<?= htmlspecialchars($formData['full_name']) ?>"
-               class="input-field" placeholder="Mohammed Al-Hassan" required>
+        <input
+          type="text"
+          name="full_name"
+          value="<?= htmlspecialchars($formData['full_name']) ?>"
+          placeholder="Mohammed Al-Hassan"
+          required
+          class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white text-gray-800"
+        >
       </div>
 
       <!-- Email -->
       <div class="mb-4">
         <label class="block text-sm font-semibold text-gray-700 mb-2">
-          <i data-lucide="mail" class="w-4 h-4 inline <?= $dir==='rtl'?'ml-1':'mr-1' ?>"></i>
+          <i data-lucide="mail" class="w-4 h-4 inline <?= $dir === 'rtl' ? 'ml-1' : 'mr-1' ?>"></i>
           <?= t('email') ?>
         </label>
-        <input type="email" name="email"
-               value="<?= htmlspecialchars($formData['email']) ?>"
-               class="input-field" placeholder="eleve@example.ma" required>
+        <input
+          type="email"
+          name="email"
+          value="<?= htmlspecialchars($formData['email']) ?>"
+          placeholder="eleve@example.ma"
+          required
+          class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white text-gray-800"
+        >
       </div>
 
       <!-- Grade Level -->
       <div class="mb-4">
         <label class="block text-sm font-semibold text-gray-700 mb-2">
-          <i data-lucide="graduation-cap" class="w-4 h-4 inline <?= $dir==='rtl'?'ml-1':'mr-1' ?>"></i>
+          <i data-lucide="graduation-cap" class="w-4 h-4 inline <?= $dir === 'rtl' ? 'ml-1' : 'mr-1' ?>"></i>
           <?= t('grade_level') ?>
         </label>
-        <select name="grade_level_id" class="input-field" required>
+        <select
+          name="grade_level_id"
+          required
+          class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white text-gray-800 cursor-pointer"
+        >
           <option value=""><?= t('select_grade') ?></option>
-          <?php foreach($levels as $lv): ?>
-          <option value="<?= $lv['id'] ?>" <?= ($formData['grade_level_id'] == $lv['id']) ? 'selected' : '' ?>>
+          <?php foreach ($levels as $lv): ?>
+          <option
+            value="<?= $lv['id'] ?>"
+            <?= ((string)$formData['grade_level_id'] === (string)$lv['id']) ? 'selected' : '' ?>
+          >
             <?= htmlspecialchars($lv['name']) ?>
           </option>
           <?php endforeach; ?>
@@ -151,23 +177,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <!-- Password -->
       <div class="mb-4">
         <label class="block text-sm font-semibold text-gray-700 mb-2">
-          <i data-lucide="lock" class="w-4 h-4 inline <?= $dir==='rtl'?'ml-1':'mr-1' ?>"></i>
+          <i data-lucide="lock" class="w-4 h-4 inline <?= $dir === 'rtl' ? 'ml-1' : 'mr-1' ?>"></i>
           <?= t('password') ?>
         </label>
-        <input type="password" name="password" class="input-field" placeholder="Min. 8 caractères" required>
+        <input
+          type="password"
+          name="password"
+          placeholder="Min. 8 caractères"
+          required
+          class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white text-gray-800"
+        >
       </div>
 
       <!-- Confirm Password -->
       <div class="mb-6">
         <label class="block text-sm font-semibold text-gray-700 mb-2">
-          <i data-lucide="shield-check" class="w-4 h-4 inline <?= $dir==='rtl'?'ml-1':'mr-1' ?>"></i>
+          <i data-lucide="shield-check" class="w-4 h-4 inline <?= $dir === 'rtl' ? 'ml-1' : 'mr-1' ?>"></i>
           <?= t('confirm_password') ?>
         </label>
-        <input type="password" name="confirm_password" class="input-field" placeholder="Répétez le mot de passe" required>
+        <input
+          type="password"
+          name="confirm_password"
+          placeholder="Répétez le mot de passe"
+          required
+          class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white text-gray-800"
+        >
       </div>
 
-      <button type="submit"
-              class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-xl transition flex items-center justify-center gap-2 text-base shadow-lg shadow-blue-200">
+      <!-- Submit -->
+      <button
+        type="submit"
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-blue-200 text-base"
+      >
         <i data-lucide="user-plus" class="w-5 h-5"></i>
         <?= t('register') ?>
       </button>
@@ -175,14 +216,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <!-- Language Switcher -->
     <div class="flex justify-center gap-3 mt-6">
-      <?php foreach(['ar','fr','en'] as $l): ?>
-      <a href="?lang=<?= $l ?>"
-         class="text-xs font-bold px-3 py-1 rounded-lg transition <?= $lang===$l ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200' ?>">
+      <?php foreach (['ar', 'fr', 'en'] as $l): ?>
+      <a
+        href="?lang=<?= $l ?>"
+        class="text-xs font-bold px-3 py-1 rounded-lg transition
+               <?= $lang === $l ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200' ?>"
+      >
         <?= strtoupper($l) ?>
       </a>
       <?php endforeach; ?>
     </div>
   </div>
+
 </div>
 
 <script>lucide.createIcons();</script>
