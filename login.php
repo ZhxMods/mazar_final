@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $redirect = $_GET['redirect'] ?? '';
                 if ($redirect && strpos($redirect, '/') === 0) redirect($redirect);
-                redirect(in_array($user['role'], ['admin','super_admin']) ? 'admin/dashboard.php' : 'student/dashboard.php');
+                redirect(in_array($user['role'], ['staff','admin','super_admin']) ? 'admin/dashboard.php' : 'student/dashboard.php');
             }
         }
     }

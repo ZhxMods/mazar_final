@@ -3,11 +3,12 @@ require_once dirname(__DIR__) . '/config.php';
 require_once dirname(__DIR__) . '/includes/db.php';
 require_once dirname(__DIR__) . '/includes/functions.php';
 require_once dirname(__DIR__) . '/includes/admin_auth.php';
+require_once dirname(__DIR__) . '/includes/permissions.php';
 
 $lang      = getCurrentLang();
 $dir       = getDirection();
 $db        = getDB();
-$pageTitle = t('manage_lessons');
+$pageTitle = 'Gérer les cours';
 $msg       = '';
 $msgType   = 'success';
 
@@ -15,17 +16,17 @@ $msgType   = 'success';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
     $action = $_POST['action'] ?? '';
 
-    if ($action === 'add' || $action === 'edit') {
-        $titleAr   = trim($_POST['title_ar']   ?? '');
-        $titleFr   = trim($_POST['title_fr']   ?? '');
-        $titleEn   = trim($_POST['title_en']   ?? '');
-        $type      = $_POST['type']       ?? 'video';
-        $url       = trim($_POST['url']        ?? '');
-        $levelId   = (int)($_POST['level_id']  ?? 0);
-        $subjectId = (int)($_POST['subject_id']?? 0);
-        $thumb     = trim($_POST['thumbnail']  ?? '');
-        $duration  = (int)($_POST['duration']  ?? 0);
-        $order     = (int)($_POST['order_num'] ?? 0);
+    if (($action === 'add' || $action === 'edit') && canEditLesson()) {
+        $titleAr   = trim($_POST['title_ar']    ?? '');
+        $titleFr   = trim($_POST['title_fr']    ?? '');
+        $titleEn   = trim($_POST['title_en']    ?? '');
+        $type      = $_POST['type']             ?? 'video';
+        $url       = trim($_POST['url']         ?? '');
+        $levelId   = (int)($_POST['level_id']   ?? 0);
+        $subjectId = (int)($_POST['subject_id'] ?? 0);
+        $thumb     = trim($_POST['thumbnail']   ?? '');
+        $duration  = (int)($_POST['duration']   ?? 0);
+        $order     = (int)($_POST['order_num']  ?? 0);
         $published = isset($_POST['published']) ? 1 : 0;
 
         if (!$titleFr || !$url || !$levelId || !$subjectId) {
@@ -40,22 +41,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
                     "INSERT INTO lessons (title_ar,title_fr,title_en,type,url,thumbnail,level_id,subject_id,duration,xp_reward,order_num,published)
                      VALUES (?,?,?,?,?,?,?,?,?,10,?,?)"
                 )->execute([$titleAr,$titleFr,$titleEn,$type,$url,$thumb,$levelId,$subjectId,$duration,$order,$published]);
+                logActivity($_SESSION[SESS_USER_ID], 'lesson_add', "Added lesson: {$titleFr}");
                 $msg = 'Cours ajouté avec succès !';
             } else {
                 $id = (int)($_POST['edit_id'] ?? 0);
                 $db->prepare(
                     "UPDATE lessons SET title_ar=?,title_fr=?,title_en=?,type=?,url=?,thumbnail=?,level_id=?,subject_id=?,duration=?,order_num=?,published=? WHERE id=?"
                 )->execute([$titleAr,$titleFr,$titleEn,$type,$url,$thumb,$levelId,$subjectId,$duration,$order,$published,$id]);
+                logActivity($_SESSION[SESS_USER_ID], 'lesson_edit', "Edited lesson #{$id}");
                 $msg = 'Cours modifié avec succès !';
             }
         }
     }
 
-    if ($action === 'delete') {
+    if ($action === 'delete' && canDeleteLesson()) {
         $id = (int)($_POST['delete_id'] ?? 0);
         $db->prepare("DELETE FROM lessons WHERE id=?")->execute([$id]);
+        logActivity($_SESSION[SESS_USER_ID], 'lesson_delete', "Deleted lesson #{$id}");
         $msg = 'Cours supprimé.';
-        $msgType = 'success';
+    }
+
+    if ($action === 'delete' && !canDeleteLesson()) {
+        $msg = 'Permission refusée.';
+        $msgType = 'error';
     }
 }
 
@@ -63,6 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
 $levels  = getAllLevels();
 $lessons = $db->query(
     "SELECT l.id, l.title_fr, l.title_ar, l.type, l.url, l.published, l.order_num, l.duration,
+            l.level_id, l.subject_id,
             lv.name_fr AS level_name, s.name_fr AS subject_name
      FROM lessons l
      JOIN levels lv ON lv.id = l.level_id
@@ -70,7 +79,6 @@ $lessons = $db->query(
      ORDER BY lv.order_num ASC, l.order_num ASC, l.created_at DESC"
 )->fetchAll();
 
-// Subjects JSON for JS (level_id → subjects)
 $allSubjects = $db->query("SELECT id, name_fr AS name, level_id FROM subjects ORDER BY level_id, order_num")->fetchAll();
 $subjectsByLevel = [];
 foreach($allSubjects as $s) {
@@ -80,7 +88,6 @@ foreach($allSubjects as $s) {
 require dirname(__DIR__) . '/admin/_layout.php';
 ?>
 
-<!-- ── Success/Error Message ── -->
 <?php if($msg): ?>
 <div class="mb-5 p-4 rounded-xl text-sm font-semibold flex items-center gap-2
      <?= $msgType==='success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200' ?>">
@@ -91,12 +98,22 @@ require dirname(__DIR__) . '/admin/_layout.php';
 <!-- ── Action Bar ── -->
 <div class="flex justify-between items-center mb-5">
   <p class="text-gray-500 text-sm"><?= count($lessons) ?> cours au total</p>
+  <?php if(canAddLesson()): ?>
   <button onclick="openAddModal()"
           class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-xl transition text-sm">
     <i data-lucide="plus" class="w-4 h-4"></i>
-    <?= t('add_lesson') ?>
+    Ajouter un cours
   </button>
+  <?php endif; ?>
 </div>
+
+<!-- ── Role badge ── -->
+<?php if(!canDeleteLesson()): ?>
+<div class="mb-4 p-3 bg-cyan-50 border border-cyan-200 rounded-xl text-cyan-700 text-xs font-semibold flex items-center gap-2">
+  <i data-lucide="info" class="w-4 h-4"></i>
+  Mode Staff — vous pouvez ajouter et modifier des cours, mais pas les supprimer.
+</div>
+<?php endif; ?>
 
 <!-- ── Lessons Table ── -->
 <div class="admin-card overflow-hidden">
@@ -105,12 +122,12 @@ require dirname(__DIR__) . '/admin/_layout.php';
       <thead>
         <tr class="bg-gray-50 text-gray-600 text-left">
           <th class="px-4 py-3 font-semibold">#</th>
-          <th class="px-4 py-3 font-semibold"><?= t('lesson_title') ?></th>
-          <th class="px-4 py-3 font-semibold"><?= t('grade_level') ?></th>
-          <th class="px-4 py-3 font-semibold"><?= t('subject') ?></th>
-          <th class="px-4 py-3 font-semibold"><?= t('lesson_type') ?></th>
-          <th class="px-4 py-3 font-semibold"><?= t('status') ?></th>
-          <th class="px-4 py-3 font-semibold"><?= t('actions') ?></th>
+          <th class="px-4 py-3 font-semibold">Titre</th>
+          <th class="px-4 py-3 font-semibold">Niveau</th>
+          <th class="px-4 py-3 font-semibold">Matière</th>
+          <th class="px-4 py-3 font-semibold">Type</th>
+          <th class="px-4 py-3 font-semibold">Statut</th>
+          <th class="px-4 py-3 font-semibold">Actions</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-100">
@@ -131,42 +148,45 @@ require dirname(__DIR__) . '/admin/_layout.php';
           </td>
           <td class="px-4 py-3">
             <span class="px-2 py-0.5 rounded-full text-xs font-semibold <?= $lesson['published'] ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500' ?>">
-              <?= $lesson['published'] ? t('published') : t('draft') ?>
+              <?= $lesson['published'] ? 'Publié' : 'Brouillon' ?>
             </span>
           </td>
           <td class="px-4 py-3">
             <div class="flex gap-2">
+              <?php if(canEditLesson()): ?>
               <button onclick='openEditModal(<?= json_encode($lesson) ?>)'
-                      class="text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition" title="<?= t('edit') ?>">
+                      class="text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition" title="Modifier">
                 <i data-lucide="edit-3" class="w-4 h-4"></i>
               </button>
-              <form method="POST" onsubmit="return confirm('<?= t('confirm_delete') ?>')">
+              <?php endif; ?>
+              <?php if(canDeleteLesson()): ?>
+              <form method="POST" onsubmit="return confirm('Supprimer ce cours ?')">
                 <?= csrfField() ?>
                 <input type="hidden" name="action"    value="delete">
                 <input type="hidden" name="delete_id" value="<?= $lesson['id'] ?>">
-                <button type="submit" class="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition" title="<?= t('delete') ?>">
+                <button type="submit" class="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition" title="Supprimer">
                   <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
               </form>
+              <?php endif; ?>
             </div>
           </td>
         </tr>
         <?php endforeach; ?>
         <?php if(empty($lessons)): ?>
-        <tr><td colspan="7" class="px-4 py-12 text-center text-gray-400"><?= t('no_results') ?></td></tr>
+        <tr><td colspan="7" class="px-4 py-12 text-center text-gray-400">Aucun cours.</td></tr>
         <?php endif; ?>
       </tbody>
     </table>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════
-     ADD/EDIT LESSON MODAL
-════════════════════════════════════════ -->
+<!-- ══ ADD / EDIT MODAL ══════════════════════════════════════ -->
+<?php if(canEditLesson()): ?>
 <div id="lesson-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeModal()">
   <div class="modal-box">
     <div class="px-7 py-5 border-b border-gray-100 flex items-center justify-between">
-      <h2 id="modal-title" class="font-black text-gray-900 text-lg"><?= t('add_lesson') ?></h2>
+      <h2 id="modal-title" class="font-black text-gray-900 text-lg">Ajouter un cours</h2>
       <button onclick="closeModal()" class="text-gray-400 hover:text-gray-700 p-2 rounded-xl hover:bg-gray-100 transition">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
@@ -177,127 +197,109 @@ require dirname(__DIR__) . '/admin/_layout.php';
       <input type="hidden" name="action"  id="form-action"  value="add">
       <input type="hidden" name="edit_id" id="form-edit-id" value="">
 
-      <!-- Titles row -->
       <div class="grid md:grid-cols-3 gap-4">
         <div>
-          <label class="label-sm"><?= t('title_ar') ?></label>
-          <input type="text" name="title_ar" id="f-title_ar" class="inp" dir="rtl" placeholder="العنوان بالعربية">
+          <label class="label-sm">Titre (AR)</label>
+          <input type="text" name="title_ar" id="f-title_ar" class="inp" dir="rtl" placeholder="العنوان">
         </div>
         <div>
-          <label class="label-sm"><?= t('title_fr') ?> *</label>
+          <label class="label-sm">Titre (FR) *</label>
           <input type="text" name="title_fr" id="f-title_fr" class="inp" placeholder="Titre en français" required>
         </div>
         <div>
-          <label class="label-sm"><?= t('title_en') ?></label>
+          <label class="label-sm">Titre (EN)</label>
           <input type="text" name="title_en" id="f-title_en" class="inp" placeholder="Title in English">
         </div>
       </div>
 
-      <!-- Level & Subject -->
       <div class="grid md:grid-cols-2 gap-4">
         <div>
-          <label class="label-sm"><?= t('grade_level') ?> *</label>
+          <label class="label-sm">Niveau *</label>
           <select name="level_id" id="f-level" class="inp" onchange="loadSubjects(this.value)" required>
-            <option value=""><?= t('select_grade') ?></option>
+            <option value="">— Sélectionner le niveau —</option>
             <?php foreach($levels as $lv): ?>
             <option value="<?= $lv['id'] ?>"><?= htmlspecialchars($lv['name']) ?></option>
             <?php endforeach; ?>
           </select>
         </div>
         <div>
-          <label class="label-sm"><?= t('subject') ?> *</label>
+          <label class="label-sm">Matière *</label>
           <select name="subject_id" id="f-subject" class="inp" required>
             <option value="">— Sélectionner la matière —</option>
           </select>
         </div>
       </div>
 
-      <!-- Type -->
       <div>
-        <label class="label-sm"><?= t('lesson_type') ?> *</label>
+        <label class="label-sm">Type de contenu *</label>
         <select name="type" id="f-type" class="inp" onchange="updatePreviewType()">
-          <option value="video"><?= t('video') ?></option>
-          <option value="pdf"><?= t('pdf') ?></option>
-          <option value="book"><?= t('book') ?></option>
+          <option value="video">Vidéo YouTube</option>
+          <option value="pdf">Document PDF (MediaFire)</option>
+          <option value="book">Livre (MediaFire)</option>
         </select>
       </div>
 
-      <!-- URL + Live Preview -->
       <div>
-        <label class="label-sm"><?= t('lesson_url') ?> *</label>
+        <label class="label-sm">URL *</label>
         <div class="flex gap-3">
           <input type="url" name="url" id="f-url" class="inp flex-1" placeholder="https://..." required
                  oninput="updatePreview(this.value)">
           <a id="preview-test-link" href="#" target="_blank" rel="noopener"
              class="flex-shrink-0 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-xl text-sm font-medium transition flex items-center gap-1">
-            <i data-lucide="external-link" class="w-4 h-4"></i>
-            <?= t('test_link') ?>
+            <i data-lucide="external-link" class="w-4 h-4"></i> Tester
           </a>
         </div>
-        <!-- Preview area -->
         <div id="url-preview" class="mt-3 hidden">
-          <!-- YouTube embed -->
           <div id="yt-preview" class="hidden">
-            <iframe id="yt-iframe" class="w-full rounded-xl border border-gray-200"
-                    height="200" frameborder="0" allowfullscreen
-                    allow="accelerometer; autoplay; encrypted-media; gyroscope"></iframe>
+            <iframe id="yt-iframe" class="w-full rounded-xl border border-gray-200" height="200" frameborder="0" allowfullscreen></iframe>
           </div>
-          <!-- File preview -->
           <div id="file-preview" class="hidden flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
             <div id="file-icon" class="text-4xl"></div>
             <div>
               <div id="file-name" class="font-semibold text-gray-800 text-sm"></div>
-              <div class="text-gray-400 text-xs">MediaFire / Lien externe</div>
+              <div class="text-gray-400 text-xs">Lien externe</div>
             </div>
           </div>
         </div>
-        <!-- Validation warning -->
         <div id="url-warning" class="hidden mt-2 text-amber-600 text-xs flex items-center gap-1">
-          <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
-          L'URL doit commencer par https://
+          <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> L'URL doit commencer par https://
         </div>
       </div>
 
-      <!-- Thumbnail & Duration -->
       <div class="grid md:grid-cols-2 gap-4">
         <div>
-          <label class="label-sm"><?= t('thumbnail') ?> (URL)</label>
+          <label class="label-sm">Miniature (URL)</label>
           <input type="url" name="thumbnail" id="f-thumb" class="inp" placeholder="https://img.youtube.com/...">
         </div>
         <div>
-          <label class="label-sm"><?= t('duration') ?></label>
+          <label class="label-sm">Durée (min)</label>
           <input type="number" name="duration" id="f-duration" class="inp" min="0" placeholder="45">
         </div>
       </div>
 
-      <!-- Order + Published -->
       <div class="grid md:grid-cols-2 gap-4 items-center">
         <div>
-          <label class="label-sm"><?= t('lesson_order') ?></label>
+          <label class="label-sm">Ordre</label>
           <input type="number" name="order_num" id="f-order" class="inp" min="0" value="0">
         </div>
         <div class="flex items-center gap-3 pt-5">
-          <input type="checkbox" name="published" id="f-published" value="1" checked
-                 class="w-5 h-5 text-blue-600 rounded cursor-pointer">
-          <label for="f-published" class="text-sm font-medium text-gray-700 cursor-pointer"><?= t('published') ?></label>
+          <input type="checkbox" name="published" id="f-published" value="1" checked class="w-5 h-5 text-blue-600 rounded cursor-pointer">
+          <label for="f-published" class="text-sm font-medium text-gray-700 cursor-pointer">Publié</label>
         </div>
       </div>
 
-      <!-- Actions -->
       <div class="flex gap-3 pt-2">
-        <button type="submit" id="save-btn"
-                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2">
-          <i data-lucide="save" class="w-4 h-4"></i>
-          <?= t('save') ?>
+        <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2">
+          <i data-lucide="save" class="w-4 h-4"></i> Enregistrer
         </button>
-        <button type="button" onclick="closeModal()"
-                class="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition">
-          <?= t('cancel') ?>
+        <button type="button" onclick="closeModal()" class="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition">
+          Annuler
         </button>
       </div>
     </form>
   </div>
 </div>
+<?php endif; ?>
 
 <style>
   .inp { width:100%; padding:.625rem 1rem; border:1px solid #e5e7eb; border-radius:.75rem; font-size:.875rem; outline:none; transition: border-color .15s, box-shadow .15s; background:#fff; }
@@ -314,15 +316,14 @@ function loadSubjects(levelId, selectedId = null) {
   const subs = SUBJECTS_MAP[levelId] || [];
   subs.forEach(s => {
     const opt = document.createElement('option');
-    opt.value = s.id;
-    opt.textContent = s.name;
+    opt.value = s.id; opt.textContent = s.name;
     if (selectedId && s.id == selectedId) opt.selected = true;
     sel.appendChild(opt);
   });
 }
 
 function openAddModal() {
-  document.getElementById('modal-title').textContent = '<?= t('add_lesson') ?>';
+  document.getElementById('modal-title').textContent = 'Ajouter un cours';
   document.getElementById('form-action').value = 'add';
   document.getElementById('lesson-form').reset();
   document.getElementById('url-preview').classList.add('hidden');
@@ -331,87 +332,54 @@ function openAddModal() {
 }
 
 function openEditModal(lesson) {
-  document.getElementById('modal-title').textContent = '<?= t('edit') ?> Cours #' + lesson.id;
+  document.getElementById('modal-title').textContent = 'Modifier Cours #' + lesson.id;
   document.getElementById('form-action').value = 'edit';
   document.getElementById('form-edit-id').value = lesson.id;
-
-  document.getElementById('f-title_ar').value  = lesson.title_ar || '';
-  document.getElementById('f-title_fr').value  = lesson.title_fr || '';
-  document.getElementById('f-title_en').value  = lesson.title_en || '';
-  document.getElementById('f-type').value      = lesson.type     || 'video';
-  document.getElementById('f-url').value       = lesson.url      || '';
-  document.getElementById('f-thumb').value     = lesson.thumbnail|| '';
-  document.getElementById('f-duration').value  = lesson.duration || 0;
-  document.getElementById('f-order').value     = lesson.order_num|| 0;
+  document.getElementById('f-title_ar').value  = lesson.title_ar  || '';
+  document.getElementById('f-title_fr').value  = lesson.title_fr  || '';
+  document.getElementById('f-title_en').value  = lesson.title_en  || '';
+  document.getElementById('f-type').value      = lesson.type      || 'video';
+  document.getElementById('f-url').value       = lesson.url       || '';
+  document.getElementById('f-thumb').value     = lesson.thumbnail || '';
+  document.getElementById('f-duration').value  = lesson.duration  || 0;
+  document.getElementById('f-order').value     = lesson.order_num || 0;
   document.getElementById('f-published').checked = lesson.published == 1;
-
   loadSubjects(lesson.level_id, lesson.subject_id);
   document.getElementById('f-level').value = lesson.level_id;
-
   updatePreview(lesson.url);
   document.getElementById('lesson-modal').classList.remove('hidden');
   lucide.createIcons();
 }
 
-function closeModal() {
-  document.getElementById('lesson-modal').classList.add('hidden');
-}
+function closeModal() { document.getElementById('lesson-modal').classList.add('hidden'); }
 
 function updatePreview(url) {
-  const testLink    = document.getElementById('preview-test-link');
-  const preview     = document.getElementById('url-preview');
-  const ytDiv       = document.getElementById('yt-preview');
-  const fileDiv     = document.getElementById('file-preview');
-  const warning     = document.getElementById('url-warning');
-  const saveBtn     = document.getElementById('save-btn');
-
-  if (!url || url.trim() === '') {
-    preview.classList.add('hidden');
-    warning.classList.add('hidden');
-    saveBtn.disabled = false;
-    return;
-  }
-
-  if (!url.startsWith('https://')) {
-    preview.classList.add('hidden');
-    warning.classList.remove('hidden');
-    saveBtn.disabled = true;
-    return;
-  }
-
+  const preview = document.getElementById('url-preview');
+  const ytDiv   = document.getElementById('yt-preview');
+  const fileDiv = document.getElementById('file-preview');
+  const warning = document.getElementById('url-warning');
+  if (!url || url.trim() === '') { preview.classList.add('hidden'); warning.classList.add('hidden'); return; }
+  if (!url.startsWith('https://')) { preview.classList.add('hidden'); warning.classList.remove('hidden'); return; }
   warning.classList.add('hidden');
-  saveBtn.disabled = false;
-  testLink.href = url;
-
-  // YouTube?
+  document.getElementById('preview-test-link').href = url;
   const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
   if (ytMatch) {
-    const id = ytMatch[1];
-    document.getElementById('yt-iframe').src = `https://www.youtube.com/embed/${id}`;
-    ytDiv.classList.remove('hidden');
-    fileDiv.classList.add('hidden');
-    preview.classList.remove('hidden');
-    // Auto-fill thumbnail
-    const thumbField = document.getElementById('f-thumb');
-    if (!thumbField.value) thumbField.value = `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+    document.getElementById('yt-iframe').src = `https://www.youtube.com/embed/${ytMatch[1]}`;
+    ytDiv.classList.remove('hidden'); fileDiv.classList.add('hidden'); preview.classList.remove('hidden');
+    const t = document.getElementById('f-thumb');
+    if (!t.value) t.value = `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`;
     return;
   }
-
-  // MediaFire / PDF
   ytDiv.classList.add('hidden');
   const type = document.getElementById('f-type').value;
   const icons = { video:'🎬', pdf:'📄', book:'📗' };
   const names = { video:'Fichier Vidéo', pdf:'Document PDF', book:'Livre' };
   document.getElementById('file-icon').textContent = icons[type] || '📎';
   document.getElementById('file-name').textContent = names[type] || 'Fichier';
-  fileDiv.classList.remove('hidden');
-  preview.classList.remove('hidden');
+  fileDiv.classList.remove('hidden'); preview.classList.remove('hidden');
 }
 
-function updatePreviewType() {
-  const url = document.getElementById('f-url').value;
-  if (url) updatePreview(url);
-}
+function updatePreviewType() { const u = document.getElementById('f-url').value; if(u) updatePreview(u); }
 </script>
 
 <?php require dirname(__DIR__) . '/admin/_layout_end.php'; ?>
