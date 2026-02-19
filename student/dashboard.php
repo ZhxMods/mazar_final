@@ -19,7 +19,7 @@ $lvlStmt->execute([$gradeId]);
 $gradeName = $lvlStmt->fetchColumn() ?: '—';
 
 // Subjects for this grade
-$subjects  = getSubjectsByLevel($gradeId);
+$subjects    = getSubjectsByLevel($gradeId);
 $leaderboard = getLeaderboard($gradeId, 5);
 
 // Get user rank
@@ -37,7 +37,7 @@ $lessons = $activeSubjectId ? getLessonsBySubject($activeSubjectId, $userId) : [
 $progressPct  = xpProgressPercent($userXP, $userLevel);
 $nextLevelXP  = xpForNextLevel($userLevel);
 
-$tab = $_GET['tab'] ?? 'lessons';
+$tab     = $_GET['tab'] ?? 'lessons';
 $welcome = isset($_GET['welcome']);
 ?>
 <!DOCTYPE html>
@@ -59,13 +59,136 @@ $welcome = isset($_GET['welcome']);
     .card { background:#fff; border-radius:1rem; box-shadow:0 1px 3px rgba(0,0,0,.07); }
     .lesson-card { transition: transform .2s, box-shadow .2s; }
     .lesson-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(59,130,246,.15); }
-    .shimmer { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size:200% 100%; animation: shimmer 1.5s infinite; }
-    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
     .xp-bar-fill { transition: width 1s cubic-bezier(.4,0,.2,1); }
     .toast { position:fixed; top:20px; <?= $dir==='rtl'?'left':'right' ?>:20px; z-index:9999; }
     <?php if($dir==='rtl'): ?>
     .sidebar-nav a .icon { margin-left:.75rem; margin-right:0; }
     <?php endif; ?>
+
+    /* ══════════════════════════════════════════
+       MAZAR AI FAB — matches MAZAR design system
+    ═══════════════════════════════════════════ */
+    #mazar-fab {
+      position: fixed;
+      bottom: 2rem;
+      <?= $dir === 'rtl' ? 'left' : 'right' ?>: 2rem;
+      z-index: 9000;
+      display: flex;
+      flex-direction: column;
+      align-items: <?= $dir === 'rtl' ? 'flex-start' : 'flex-end' ?>;
+      gap: .65rem;
+      pointer-events: none; /* let children handle events */
+    }
+
+    /* Tooltip label */
+    #fab-tooltip {
+      background: #1e293b;
+      color: #f1f5f9;
+      font-family: 'Poppins', sans-serif;
+      font-size: .73rem;
+      font-weight: 700;
+      letter-spacing: .05em;
+      padding: .4rem .9rem;
+      border-radius: 999px;
+      white-space: nowrap;
+      box-shadow: 0 4px 16px rgba(0,0,0,.2);
+      border: 1px solid rgba(255,255,255,.08);
+      opacity: 0;
+      transform: translateX(<?= $dir === 'rtl' ? '-10px' : '10px' ?>);
+      transition: opacity .2s ease, transform .2s ease;
+      pointer-events: none;
+      user-select: none;
+    }
+    #mazar-fab:hover #fab-tooltip {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    /* Main button */
+    #fab-btn {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
+      box-shadow:
+        0 0 0 4px rgba(29,78,216,.18),
+        0 8px 28px rgba(30,58,138,.45),
+        0 2px 8px rgba(0,0,0,.25);
+      position: relative;
+      text-decoration: none;
+      pointer-events: all;
+      transition: transform .22s cubic-bezier(.34,1.56,.64,1), box-shadow .22s ease;
+      flex-shrink: 0;
+    }
+    #fab-btn:hover {
+      transform: scale(1.1) translateY(-2px);
+      box-shadow:
+        0 0 0 6px rgba(29,78,216,.22),
+        0 16px 40px rgba(30,58,138,.55),
+        0 4px 12px rgba(0,0,0,.3);
+    }
+    #fab-btn:active { transform: scale(.95); }
+    #fab-btn svg {
+      width: 26px;
+      height: 26px;
+      color: #fff;
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,.35));
+    }
+
+    /* Pulse ring — same animation as MAZAR level-up overlay */
+    #fab-btn::before {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      border: 2px solid rgba(29,78,216,.4);
+      animation: fabPulse 2.6s ease-out infinite;
+    }
+    @keyframes fabPulse {
+      0%  { transform: scale(1);    opacity: .8; }
+      70% { transform: scale(1.55); opacity: 0;  }
+      100%{ transform: scale(1.55); opacity: 0;  }
+    }
+
+    /* Online dot — same as MAZAR's leaderboard presence dots */
+    #fab-online {
+      position: absolute;
+      top: 3px;
+      right: 3px;
+      width: 13px;
+      height: 13px;
+      background: #10b981;
+      border-radius: 50%;
+      border: 2.5px solid #fff;
+      animation: onlineBlink 2.2s ease-in-out infinite;
+    }
+    @keyframes onlineBlink {
+      0%,100% { opacity: 1;  box-shadow: 0 0 0 0 rgba(16,185,129,.5); }
+      50%      { opacity: .6; box-shadow: 0 0 0 4px rgba(16,185,129,0); }
+    }
+
+    /* FAB entrance animation on page load */
+    #mazar-fab { animation: fabEntry .7s cubic-bezier(.34,1.56,.64,1) .5s both; }
+    @keyframes fabEntry {
+      from { opacity: 0; transform: translateY(20px) scale(.7); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Accessibility: reduce motion */
+    @media (prefers-reduced-motion: reduce) {
+      #fab-btn::before, #fab-online { animation: none; }
+      #mazar-fab { animation: none; }
+    }
+
+    /* Mobile: slightly smaller */
+    @media (max-width: 640px) {
+      #fab-btn { width: 52px; height: 52px; }
+      #fab-btn svg { width: 22px; height: 22px; }
+      #mazar-fab { bottom: 1.25rem; <?= $dir === 'rtl' ? 'left' : 'right' ?>: 1.25rem; }
+    }
   </style>
 </head>
 
@@ -132,6 +255,21 @@ $welcome = isset($_GET['welcome']);
       <i data-lucide="star" class="icon w-5 h-5 flex-shrink-0"></i>
       <span class="text-sm font-medium"><?= t('achievements') ?></span>
     </a>
+
+    <!-- MAZAR AI shortcut in sidebar -->
+    <div class="mt-4 border-t border-white/10 pt-4">
+      <a href="mazar-ai.php"
+         class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition group">
+        <div class="w-5 h-5 flex-shrink-0 flex items-center justify-center">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5">
+            <path d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z"/>
+            <path d="M18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z"/>
+          </svg>
+        </div>
+        <span class="text-sm font-medium">MAZAR AI</span>
+        <span class="ml-auto bg-yellow-400 text-yellow-900 text-xs font-bold px-1.5 py-0.5 rounded-md group-hover:scale-105 transition">IA</span>
+      </a>
+    </div>
   </nav>
 
   <!-- Language + Logout -->
@@ -162,7 +300,18 @@ $welcome = isset($_GET['welcome']);
       <h1 class="font-black text-gray-900 text-lg"><?= t('dashboard') ?></h1>
       <p class="text-gray-500 text-xs"><?= htmlspecialchars($gradeName) ?></p>
     </div>
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-3">
+      <!-- MAZAR AI quick link in header -->
+      <a href="mazar-ai.php"
+         class="hidden sm:flex items-center gap-2 bg-blue-50 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 text-blue-700 font-semibold text-sm px-3 py-2 rounded-xl transition"
+         title="Ouvrir MAZAR AI">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 flex-shrink-0">
+          <path d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z"/>
+          <path d="M18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z"/>
+        </svg>
+        MAZAR AI
+      </a>
+
       <!-- XP Badge -->
       <div class="flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-2">
         <i data-lucide="zap" class="w-4 h-4 text-yellow-500"></i>
@@ -388,9 +537,40 @@ $welcome = isset($_GET['welcome']);
     <?php endif; ?>
 
   </main>
+</div><!-- end main flex-1 -->
+
+<!-- ════════════════════════════════════════════════════════
+     MAZAR AI FLOATING ACTION BUTTON
+     Visible ONLY on student dashboard (auth_check.php guards this page to students only)
+════════════════════════════════════════════════════════ -->
+<div id="mazar-fab" role="complementary" aria-label="MAZAR AI — Assistant éducatif">
+
+  <!-- Tooltip -->
+  <div id="fab-tooltip" aria-hidden="true">
+    ✨ MAZAR AI — Poser une question
+  </div>
+
+  <!-- Main button -->
+  <a href="mazar-ai.php"
+     id="fab-btn"
+     aria-label="Ouvrir MAZAR AI, votre assistant éducatif">
+
+    <!-- Spark / AI icon — same SVG as mazar-ai.php header -->
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z"/>
+      <path d="M18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z"/>
+    </svg>
+
+    <!-- Online dot -->
+    <span id="fab-online" aria-hidden="true"></span>
+  </a>
+
 </div>
+<!-- ════════════════════════════════════════════════════════ -->
 
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <script src="../assets/js/xp-system.js"></script>
 <script>
   lucide.createIcons();
@@ -399,13 +579,12 @@ $welcome = isset($_GET['welcome']);
     return {
       init() {
         <?php if($welcome): ?>
-        showToast('🎉 Bienvenue sur MAZAR ! Bonne chance !', 'success');
+        showToast('🎉 Bienvenue sur MAZAR ! Bonne chance dans tes études !', 'success');
         <?php endif; ?>
       }
     };
   }
 
-  // Pre-set current XP values for XP system JS
   window.MAZAR_XP    = <?= $userXP ?>;
   window.MAZAR_LEVEL = <?= $userLevel ?>;
   window.MAZAR_CSRF  = '<?= csrfToken() ?>';
