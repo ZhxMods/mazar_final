@@ -564,9 +564,9 @@ html, body { height: 100%; font-family: 'Poppins', sans-serif; background: #f1f5
    Pure Vanilla JS — Zero dependencies
 ═══════════════════════════════════════════════════════ */
 
-//const GROQ_KEY   = '';
-//const GROQ_URL   = '';
-//const GROQ_MODEL = '';
+const GROQ_KEY   = '';
+const GROQ_URL   = '';
+const GROQ_MODEL = '';
 
 /* ── System Prompt ─────────────────────────────────── */
 const SYSTEM_PROMPT = `You are MAZAR AI, the official AI educational assistant of the Mazar Education platform (a Moroccan educational platform for students from primary school to Bac).
