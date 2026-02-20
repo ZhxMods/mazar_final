@@ -86,9 +86,7 @@ $dashUrl     = in_array($sessionRole, ['staff', 'admin', 'super_admin'])
 
       <!-- Logo -->
       <a href="/" class="flex items-center gap-2">
-        <div class="w-9 h-9 rounded-xl gradient-hero flex items-center justify-center">
-          <span class="text-white font-black text-lg">M</span>
-        </div>
+        <img src="assets/images/mazar.avif" alt="MAZAR" class="w-9 h-9 rounded-xl object-contain">
         <span class="text-xl font-black text-gray-900"><?= t('site_name') ?></span>
       </a>
 
@@ -197,9 +195,7 @@ $dashUrl     = in_array($sessionRole, ['staff', 'admin', 'super_admin'])
         <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 float-anim">
           <!-- Mock Dashboard Preview -->
           <div class="flex items-center gap-3 mb-6">
-            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
-              <i data-lucide="graduation-cap" class="w-6 h-6 text-white"></i>
-            </div>
+            <img src="assets/images/mazar.avif" alt="MAZAR" class="w-12 h-12 rounded-2xl object-contain flex-shrink-0">
             <div>
               <div class="text-white font-bold">Ahmed Al-Fassi</div>
               <div class="text-white/60 text-sm">2ème Bac · Niveau 7</div>
@@ -369,9 +365,7 @@ $dashUrl     = in_array($sessionRole, ['staff', 'admin', 'super_admin'])
 <footer class="bg-gray-900 text-gray-400 py-10">
   <div class="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
     <div class="flex items-center gap-2">
-      <div class="w-8 h-8 rounded-lg gradient-hero flex items-center justify-center">
-        <span class="text-white font-black text-sm">M</span>
-      </div>
+      <img src="assets/images/mazar.avif" alt="MAZAR" class="w-8 h-8 rounded-lg object-contain">
       <span class="text-white font-bold text-lg"><?= t('site_name') ?></span>
     </div>
     <p class="text-sm">© <?= date('Y') ?> <?= t('site_name') ?> — <?= t('footer_rights') ?></p>

@@ -88,9 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <!-- Logo -->
   <div class="text-center mb-8">
     <a href="/" class="inline-flex items-center gap-2">
-      <div class="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center">
-        <span class="text-white font-black text-2xl">M</span>
-      </div>
+      <img src="assets/images/mazar.avif" alt="MAZAR" class="w-12 h-12 rounded-2xl object-contain">
       <span class="text-white font-black text-2xl"><?= t('site_name') ?></span>
     </a>
     <p class="text-blue-200 mt-2 text-sm"><?= t('tagline') ?></p>

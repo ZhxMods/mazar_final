@@ -51,9 +51,7 @@ $role      = $_SESSION[SESS_ROLE] ?? '';
   <!-- Logo -->
   <div class="px-5 py-5 border-b border-white/5">
     <a href="../index.php" class="flex items-center gap-2">
-      <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center">
-        <span class="text-white font-black text-lg">M</span>
-      </div>
+      <img src="../assets/images/mazar.avif" alt="MAZAR" class="w-9 h-9 rounded-xl object-contain">
       <span class="text-white font-black text-lg"><?= t('site_name') ?></span>
     </a>
     <div class="mt-1 text-xs text-slate-500">Admin Panel</div>
@@ -90,9 +88,6 @@ $role      = $_SESSION[SESS_ROLE] ?? '';
       ['manage_lessons.php', 'book-open',        'Gérer les cours'],
       ['manage_quizzes.php', 'help-circle',      'Gérer les quiz'],
     ];
-
-    // ── Admin + super_admin ──
-    // (none extra beyond lessons/quizzes — manage_users is super_admin only)
 
     // ── super_admin only ──
     $superNav = [

@@ -66,7 +66,7 @@ $welcome = isset($_GET['welcome']);
     <?php endif; ?>
 
     /* ══════════════════════════════════════════
-       MAZAR AI FAB — matches MAZAR design system
+       MAZAR AI FAB
     ═══════════════════════════════════════════ */
     #mazar-fab {
       position: fixed;
@@ -77,10 +77,9 @@ $welcome = isset($_GET['welcome']);
       flex-direction: column;
       align-items: <?= $dir === 'rtl' ? 'flex-start' : 'flex-end' ?>;
       gap: .65rem;
-      pointer-events: none; /* let children handle events */
+      pointer-events: none;
     }
 
-    /* Tooltip label */
     #fab-tooltip {
       background: #1e293b;
       color: #f1f5f9;
@@ -104,7 +103,6 @@ $welcome = isset($_GET['welcome']);
       transform: translateX(0);
     }
 
-    /* Main button */
     #fab-btn {
       width: 60px;
       height: 60px;
@@ -138,7 +136,6 @@ $welcome = isset($_GET['welcome']);
       filter: drop-shadow(0 1px 2px rgba(0,0,0,.35));
     }
 
-    /* Pulse ring — same animation as MAZAR level-up overlay */
     #fab-btn::before {
       content: '';
       position: absolute;
@@ -153,7 +150,6 @@ $welcome = isset($_GET['welcome']);
       100%{ transform: scale(1.55); opacity: 0;  }
     }
 
-    /* Online dot — same as MAZAR's leaderboard presence dots */
     #fab-online {
       position: absolute;
       top: 3px;
@@ -170,20 +166,17 @@ $welcome = isset($_GET['welcome']);
       50%      { opacity: .6; box-shadow: 0 0 0 4px rgba(16,185,129,0); }
     }
 
-    /* FAB entrance animation on page load */
     #mazar-fab { animation: fabEntry .7s cubic-bezier(.34,1.56,.64,1) .5s both; }
     @keyframes fabEntry {
       from { opacity: 0; transform: translateY(20px) scale(.7); }
       to   { opacity: 1; transform: translateY(0) scale(1); }
     }
 
-    /* Accessibility: reduce motion */
     @media (prefers-reduced-motion: reduce) {
       #fab-btn::before, #fab-online { animation: none; }
       #mazar-fab { animation: none; }
     }
 
-    /* Mobile: slightly smaller */
     @media (max-width: 640px) {
       #fab-btn { width: 52px; height: 52px; }
       #fab-btn svg { width: 22px; height: 22px; }
@@ -194,22 +187,16 @@ $welcome = isset($_GET['welcome']);
 
 <body class="flex h-screen overflow-hidden" x-data="mazarDashboard()" x-init="init()">
 
-<!-- ────────────────────────────────────────────
-     TOAST NOTIFICATIONS
-──────────────────────────────────────────── -->
+<!-- TOAST -->
 <div id="toast-container" class="toast space-y-2"></div>
 <div id="xp-float-container" style="position:fixed;top:0;left:0;pointer-events:none;z-index:9998;"></div>
 
-<!-- ────────────────────────────────────────────
-     SIDEBAR
-──────────────────────────────────────────── -->
+<!-- ─── SIDEBAR ─── -->
 <aside class="sidebar w-64 flex-shrink-0 flex flex-col h-full overflow-y-auto hidden md:flex">
   <!-- Logo -->
   <div class="px-6 py-6 border-b border-white/10">
     <a href="/" class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-        <span class="text-white font-black text-xl">M</span>
-      </div>
+      <img src="../assets/images/mazar.avif" alt="MAZAR" class="w-10 h-10 rounded-xl object-contain">
       <span class="text-white font-black text-xl"><?= t('site_name') ?></span>
     </a>
   </div>
@@ -256,7 +243,7 @@ $welcome = isset($_GET['welcome']);
       <span class="text-sm font-medium"><?= t('achievements') ?></span>
     </a>
 
-    <!-- MAZAR AI shortcut in sidebar -->
+    <!-- MAZAR AI shortcut -->
     <div class="mt-4 border-t border-white/10 pt-4">
       <a href="mazar-ai.php"
          class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition group">
@@ -289,9 +276,7 @@ $welcome = isset($_GET['welcome']);
   </div>
 </aside>
 
-<!-- ────────────────────────────────────────────
-     MAIN CONTENT
-──────────────────────────────────────────── -->
+<!-- ─── MAIN CONTENT ─── -->
 <div class="flex-1 flex flex-col overflow-hidden">
 
   <!-- Top Bar -->
@@ -301,7 +286,7 @@ $welcome = isset($_GET['welcome']);
       <p class="text-gray-500 text-xs"><?= htmlspecialchars($gradeName) ?></p>
     </div>
     <div class="flex items-center gap-3">
-      <!-- MAZAR AI quick link in header -->
+      <!-- MAZAR AI quick link -->
       <a href="mazar-ai.php"
          class="hidden sm:flex items-center gap-2 bg-blue-50 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 text-blue-700 font-semibold text-sm px-3 py-2 rounded-xl transition"
          title="Ouvrir MAZAR AI">
@@ -537,37 +522,22 @@ $welcome = isset($_GET['welcome']);
     <?php endif; ?>
 
   </main>
-</div><!-- end main flex-1 -->
+</div>
 
-<!-- ════════════════════════════════════════════════════════
-     MAZAR AI FLOATING ACTION BUTTON
-     Visible ONLY on student dashboard (auth_check.php guards this page to students only)
-════════════════════════════════════════════════════════ -->
+<!-- ══ MAZAR AI FAB ══ -->
 <div id="mazar-fab" role="complementary" aria-label="MAZAR AI — Assistant éducatif">
-
-  <!-- Tooltip -->
   <div id="fab-tooltip" aria-hidden="true">
     ✨ MAZAR AI — Poser une question
   </div>
-
-  <!-- Main button -->
-  <a href="mazar-ai.php"
-     id="fab-btn"
-     aria-label="Ouvrir MAZAR AI, votre assistant éducatif">
-
-    <!-- Spark / AI icon — same SVG as mazar-ai.php header -->
+  <a href="mazar-ai.php" id="fab-btn" aria-label="Ouvrir MAZAR AI, votre assistant éducatif">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z"/>
       <path d="M18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z"/>
     </svg>
-
-    <!-- Online dot -->
     <span id="fab-online" aria-hidden="true"></span>
   </a>
-
 </div>
-<!-- ════════════════════════════════════════════════════════ -->
 
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
