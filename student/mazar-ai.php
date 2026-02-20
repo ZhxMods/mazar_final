@@ -564,9 +564,9 @@ html, body { height: 100%; font-family: 'Poppins', sans-serif; background: #f1f5
    Pure Vanilla JS — Zero dependencies
 ═══════════════════════════════════════════════════════ */
 
-const GROQ_KEY   = '';
-const GROQ_URL   = '';
-const GROQ_MODEL = '';
+const GROQ_KEY   = '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';
+const GROQ_URL   = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
 
 /* ── System Prompt ─────────────────────────────────── */
 const SYSTEM_PROMPT = `IDENTITY:
