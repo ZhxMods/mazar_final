@@ -51,7 +51,7 @@ function countUp(element, from, to, duration = 800) {
   const stepTime = duration / steps;
   let current = from;
   let step = 0;
-  const timer = setInterval(() => {
+  const timer = setInterval(() => {       
     step++;
     current += increment;
     element.textContent = Math.round(step < steps ? current : to).toLocaleString();
