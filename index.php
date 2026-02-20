@@ -18,6 +18,13 @@ try {
 
 // Levels grouped
 $levels = getAllLevels();
+
+// Determine dashboard URL based on role
+$isLoggedIn  = !empty($_SESSION[SESS_USER_ID]);
+$sessionRole = $_SESSION[SESS_ROLE] ?? 'student';
+$dashUrl     = in_array($sessionRole, ['staff', 'admin', 'super_admin'])
+               ? 'admin/dashboard.php'
+               : 'student/dashboard.php';
 ?>
 <!DOCTYPE html>
 <html lang="<?= $lang ?>" dir="<?= $dir ?>">
@@ -101,8 +108,8 @@ $levels = getAllLevels();
           <?php endforeach; ?>
         </div>
 
-        <?php if (!empty($_SESSION[SESS_USER_ID])): ?>
-          <a href="student/dashboard.php" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition">
+        <?php if ($isLoggedIn): ?>
+          <a href="<?= $dashUrl ?>" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition">
             <?= t('dashboard') ?>
           </a>
         <?php else: ?>
@@ -132,8 +139,12 @@ $levels = getAllLevels();
       </a>
       <?php endforeach; ?>
     </div>
-    <a href="login.php"    class="block text-center border border-blue-600 text-blue-600 py-2 rounded-lg font-semibold"><?= t('login') ?></a>
-    <a href="register.php" class="block text-center bg-blue-600 text-white py-2 rounded-lg font-semibold"><?= t('register') ?></a>
+    <?php if ($isLoggedIn): ?>
+      <a href="<?= $dashUrl ?>" class="block text-center bg-blue-600 text-white py-2 rounded-lg font-semibold"><?= t('dashboard') ?></a>
+    <?php else: ?>
+      <a href="login.php"    class="block text-center border border-blue-600 text-blue-600 py-2 rounded-lg font-semibold"><?= t('login') ?></a>
+      <a href="register.php" class="block text-center bg-blue-600 text-white py-2 rounded-lg font-semibold"><?= t('register') ?></a>
+    <?php endif; ?>
   </div>
 </nav>
 
@@ -159,11 +170,19 @@ $levels = getAllLevels();
         <?= t('hero_subtitle') ?>
       </p>
       <div class="flex flex-wrap gap-4">
-        <a href="register.php"
-           class="inline-flex items-center gap-2 bg-white text-blue-700 font-bold px-8 py-4 rounded-xl hover:bg-blue-50 transition shadow-lg shadow-blue-900/30 text-base">
-          <i data-lucide="rocket" class="w-5 h-5"></i>
-          <?= t('get_started') ?>
-        </a>
+        <?php if ($isLoggedIn): ?>
+          <a href="<?= $dashUrl ?>"
+             class="inline-flex items-center gap-2 bg-white text-blue-700 font-bold px-8 py-4 rounded-xl hover:bg-blue-50 transition shadow-lg shadow-blue-900/30 text-base">
+            <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+            <?= t('dashboard') ?>
+          </a>
+        <?php else: ?>
+          <a href="register.php"
+             class="inline-flex items-center gap-2 bg-white text-blue-700 font-bold px-8 py-4 rounded-xl hover:bg-blue-50 transition shadow-lg shadow-blue-900/30 text-base">
+            <i data-lucide="rocket" class="w-5 h-5"></i>
+            <?= t('get_started') ?>
+          </a>
+        <?php endif; ?>
         <a href="#levels"
            class="inline-flex items-center gap-2 border-2 border-white/40 text-white font-semibold px-6 py-4 rounded-xl hover:bg-white/10 transition text-base">
           <i data-lucide="play-circle" class="w-5 h-5"></i>
@@ -268,7 +287,7 @@ $levels = getAllLevels();
         <div class="p-6 space-y-2">
           <?php foreach($group['range'] as $idx): ?>
             <?php if (!empty($levels[$idx-1])): ?>
-            <a href="register.php" class="flex items-center gap-3 p-3 rounded-xl hover:bg-blue-50 group transition">
+            <a href="<?= $isLoggedIn ? $dashUrl : 'register.php' ?>" class="flex items-center gap-3 p-3 rounded-xl hover:bg-blue-50 group transition">
               <div class="w-2 h-2 rounded-full bg-blue-400 group-hover:bg-blue-600 transition flex-shrink-0"></div>
               <span class="text-gray-700 group-hover:text-blue-700 text-sm font-medium transition">
                 <?= htmlspecialchars($levels[$idx-1]['name']) ?>
@@ -323,15 +342,23 @@ $levels = getAllLevels();
     <h2 class="text-3xl sm:text-4xl font-black text-white mb-4"><?= t('cta_title') ?></h2>
     <p class="text-white/80 text-lg mb-10"><?= t('cta_subtitle') ?></p>
     <div class="flex flex-col sm:flex-row gap-4 justify-center">
-      <a href="register.php"
-         class="inline-flex items-center justify-center gap-2 bg-white text-blue-700 font-bold px-10 py-4 rounded-xl hover:bg-blue-50 transition shadow-lg text-lg">
-        <i data-lucide="user-plus" class="w-5 h-5"></i>
-        <?= t('register') ?>
-      </a>
-      <a href="login.php"
-         class="inline-flex items-center justify-center gap-2 border-2 border-white/40 text-white font-semibold px-8 py-4 rounded-xl hover:bg-white/10 transition text-lg">
-        <?= t('login') ?>
-      </a>
+      <?php if ($isLoggedIn): ?>
+        <a href="<?= $dashUrl ?>"
+           class="inline-flex items-center justify-center gap-2 bg-white text-blue-700 font-bold px-10 py-4 rounded-xl hover:bg-blue-50 transition shadow-lg text-lg">
+          <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+          <?= t('dashboard') ?>
+        </a>
+      <?php else: ?>
+        <a href="register.php"
+           class="inline-flex items-center justify-center gap-2 bg-white text-blue-700 font-bold px-10 py-4 rounded-xl hover:bg-blue-50 transition shadow-lg text-lg">
+          <i data-lucide="user-plus" class="w-5 h-5"></i>
+          <?= t('register') ?>
+        </a>
+        <a href="login.php"
+           class="inline-flex items-center justify-center gap-2 border-2 border-white/40 text-white font-semibold px-8 py-4 rounded-xl hover:bg-white/10 transition text-lg">
+          <?= t('login') ?>
+        </a>
+      <?php endif; ?>
     </div>
   </div>
 </section>

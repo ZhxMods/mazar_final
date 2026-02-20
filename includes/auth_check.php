@@ -12,12 +12,12 @@ if (!function_exists('redirect')) require_once __DIR__ . '/functions.php';
 
 // Not logged in at all
 if (empty($_SESSION[SESS_USER_ID])) {
-    redirect(dirname($_SERVER['SCRIPT_NAME'], 2) . '/login.php?redirect=' . urlencode($_SERVER['REQUEST_URI']));
+    redirect('/login.php?redirect=' . urlencode($_SERVER['REQUEST_URI']));
 }
 
 // Staff / admin / super_admin should never land on student pages
 if (in_array($_SESSION[SESS_ROLE] ?? '', ['staff', 'admin', 'super_admin'])) {
-    redirect(dirname($_SERVER['SCRIPT_NAME'], 2) . '/admin/dashboard.php');
+    redirect('/admin/dashboard.php');
 }
 
 // Refresh XP/level + banned check from DB on every student page load
@@ -27,7 +27,7 @@ if (function_exists('getDB')) {
     $__user = $__stmt->fetch();
     if (!$__user || $__user['status'] !== 'active') {
         session_destroy();
-        redirect(dirname($_SERVER['SCRIPT_NAME'], 2) . '/login.php?msg=banned');
+        redirect('/login.php?msg=banned');
     }
     $_SESSION[SESS_XP]    = $__user['xp_points'];
     $_SESSION[SESS_LEVEL] = $__user['level'];
