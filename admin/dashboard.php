@@ -144,5 +144,5 @@ require dirname(__DIR__) . '/admin/_layout.php';
   </div>
 
 </div>
-<!-- hhhhhhhhh -->
-<?php require dirname(__DIR__) . '/admin/_layout_end.php'; ?>    
+
+<?php require dirname(__DIR__) . '/admin/_layout_end.php'; ?>

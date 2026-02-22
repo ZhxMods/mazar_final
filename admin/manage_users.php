@@ -177,18 +177,10 @@ require dirname(__DIR__) . '/admin/_layout.php';
           <!-- Role -->
           <td class="px-4 py-3">
             <?php
-              $rolePill = match($u['role']) {
-                  'super_admin' => 'bg-purple-100 text-purple-700',
-                  'admin'       => 'bg-blue-100 text-blue-700',
-                  'staff'       => 'bg-cyan-100 text-cyan-700',
-                  default       => 'bg-gray-100 text-gray-600',
-              };
-              $roleLabel = match($u['role']) {
-                  'super_admin' => '👑 Super Admin',
-                  'admin'       => '🛡 Admin',
-                  'staff'       => '🔧 Staff',
-                  default       => '🎓 Étudiant',
-              };
+              if ($u['role'] === 'super_admin')     { $rolePill = 'bg-purple-100 text-purple-700'; $roleLabel = '👑 Super Admin'; }
+              elseif ($u['role'] === 'admin')        { $rolePill = 'bg-blue-100 text-blue-700';    $roleLabel = '🛡 Admin';       }
+              elseif ($u['role'] === 'staff')        { $rolePill = 'bg-cyan-100 text-cyan-700';    $roleLabel = '🔧 Staff';       }
+              else                                   { $rolePill = 'bg-gray-100 text-gray-600';    $roleLabel = '🎓 Étudiant';    }
             ?>
             <span class="px-2 py-0.5 rounded-full text-xs font-semibold <?= $rolePill ?>"><?= $roleLabel ?></span>
           </td>
