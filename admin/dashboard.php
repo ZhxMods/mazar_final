@@ -42,13 +42,14 @@ require dirname(__DIR__) . '/admin/_layout.php';
 <!-- ── Stats Cards ── -->
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
   <?php
-  $stats = [
-    [t('total_students'), $totalStudents, 'users',    '#3B82F6'],
-    [t('total_lessons'),  $totalLessons,  'book-open','#10B981'],
-    [t('total_xp_awarded'), number_format((int)$totalXP).' XP', 'zap', '#F59E0B'],
-    ['Complétion Cours',  $totalComplete, 'check-circle','#8B5CF6'],
-  ];
-  foreach($stats as [$label,$val,$icon,$color]):
+  $stats = array(
+    array(t('total_students'),    $totalStudents,                           'users',       '#3B82F6'),
+    array(t('total_lessons'),     $totalLessons,                            'book-open',   '#10B981'),
+    array(t('total_xp_awarded'),  number_format((int)$totalXP) . ' XP',    'zap',         '#F59E0B'),
+    array('Complétion Cours',     $totalComplete,                           'check-circle','#8B5CF6'),
+  );
+  foreach ($stats as $stat):
+    $label = $stat[0]; $val = $stat[1]; $icon = $stat[2]; $color = $stat[3];
   ?>
   <div class="stat-card">
     <div class="flex items-start justify-between mb-3">
@@ -72,20 +73,27 @@ require dirname(__DIR__) . '/admin/_layout.php';
       <?= t('recent_activities') ?>
     </h2>
     <div class="space-y-3 max-h-80 overflow-y-auto">
-      <?php if(empty($activities)): ?>
+      <?php if (empty($activities)): ?>
       <p class="text-gray-400 text-sm text-center py-6"><?= t('no_results') ?></p>
       <?php endif; ?>
-      <?php foreach($activities as $act): ?>
+      <?php foreach ($activities as $act): ?>
       <?php
-        $icons = ['login'=>'🔐','logout'=>'👋','register'=>'🎉','lesson_complete'=>'📚','xp_earned'=>'⚡'];
-        $ico   = $icons[$act['action']] ?? '📌';
-        $time  = (new DateTime($act['created_at']))->format('d/m H:i');
+        $icons = array(
+            'login'           => '🔐',
+            'logout'          => '👋',
+            'register'        => '🎉',
+            'lesson_complete' => '📚',
+            'xp_earned'       => '⚡',
+        );
+        $ico  = isset($icons[$act['action']]) ? $icons[$act['action']] : '📌';
+        // FIX: use date() instead of DateTime object for PHP 5.x safety
+        $time = date('d/m H:i', strtotime($act['created_at']));
       ?>
       <div class="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition">
         <div class="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0 text-sm"><?= $ico ?></div>
         <div class="flex-1 min-w-0">
           <div class="text-sm font-semibold text-gray-900"><?= htmlspecialchars($act['full_name']) ?></div>
-          <div class="text-xs text-gray-500 truncate"><?= htmlspecialchars($act['details'] ?: $act['action']) ?></div>
+          <div class="text-xs text-gray-500 truncate"><?= htmlspecialchars($act['details'] ? $act['details'] : $act['action']) ?></div>
         </div>
         <div class="text-xs text-gray-400 flex-shrink-0"><?= $time ?></div>
       </div>
@@ -100,14 +108,18 @@ require dirname(__DIR__) . '/admin/_layout.php';
       Top Étudiants — Toutes Classes
     </h2>
     <div class="space-y-3">
-      <?php if(empty($topStudents)): ?>
+      <?php if (empty($topStudents)): ?>
       <p class="text-gray-400 text-sm text-center py-6"><?= t('no_results') ?></p>
       <?php endif; ?>
-      <?php foreach($topStudents as $pos => $stu): ?>
+      <?php foreach ($topStudents as $pos => $stu): ?>
+      <?php
+        if ($pos === 0)      { $posCls = 'bg-yellow-400 text-yellow-900'; }
+        elseif ($pos === 1)  { $posCls = 'bg-gray-300 text-gray-800'; }
+        else                 { $posCls = 'bg-amber-700 text-white'; }
+      ?>
       <div class="flex items-center gap-3 p-3 rounded-xl bg-gray-50">
-        <div class="w-7 h-7 rounded-full flex items-center justify-center text-sm font-black
-             <?= $pos===0?'bg-yellow-400 text-yellow-900':($pos===1?'bg-gray-300 text-gray-800':'bg-amber-700 text-white') ?>">
-          <?= $pos+1 ?>
+        <div class="w-7 h-7 rounded-full flex items-center justify-center text-sm font-black <?= $posCls ?>">
+          <?= $pos + 1 ?>
         </div>
         <div class="flex-1 min-w-0">
           <div class="font-semibold text-sm text-gray-900 truncate"><?= htmlspecialchars($stu['full_name']) ?></div>
@@ -132,5 +144,5 @@ require dirname(__DIR__) . '/admin/_layout.php';
   </div>
 
 </div>
-
-<?php require dirname(__DIR__) . '/admin/_layout_end.php'; ?>
+<!-- hhhhhhhhh -->
+<?php require dirname(__DIR__) . '/admin/_layout_end.php'; ?>    

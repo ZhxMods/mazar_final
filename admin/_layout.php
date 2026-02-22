@@ -4,17 +4,36 @@
 
 if (!function_exists('isSuperAdmin')) require_once dirname(__DIR__) . '/includes/permissions.php';
 
-$lang      = getCurrentLang();
-$dir       = getDirection();
-$adminName = $_SESSION[SESS_UNAME] ?? $_SESSION[SESS_USERNAME] ?? 'Admin';
-$role      = $_SESSION[SESS_ROLE] ?? '';
+$lang = getCurrentLang();
+$dir  = getDirection();
+
+// ── FIX: SESS_UNAME may not be defined in config.php ─────────
+// Try SESS_UNAME first, then SESS_USERNAME, then raw key, then fallback
+if (defined('SESS_UNAME') && isset($_SESSION[SESS_UNAME])) {
+    $adminName = $_SESSION[SESS_UNAME];
+} elseif (defined('SESS_USERNAME') && isset($_SESSION[SESS_USERNAME])) {
+    $adminName = $_SESSION[SESS_USERNAME];
+} elseif (isset($_SESSION['username'])) {
+    $adminName = $_SESSION['username'];
+} elseif (isset($_SESSION['full_name'])) {
+    $adminName = $_SESSION['full_name'];
+} else {
+    $adminName = 'Admin';
+}
+
+$role = '';
+if (defined('SESS_ROLE') && isset($_SESSION[SESS_ROLE])) {
+    $role = $_SESSION[SESS_ROLE];
+} elseif (isset($_SESSION['role'])) {
+    $role = $_SESSION['role'];
+}
 ?>
 <!DOCTYPE html>
 <html lang="<?= $lang ?>" dir="<?= $dir ?>">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><?= htmlspecialchars($pageTitle ?? 'Admin') ?> — <?= t('site_name') ?></title>
+  <title><?= htmlspecialchars(isset($pageTitle) ? $pageTitle : 'Admin') ?> — <?= t('site_name') ?></title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
@@ -61,18 +80,21 @@ $role      = $_SESSION[SESS_ROLE] ?? '';
   <div class="px-5 py-4 border-b border-white/5">
     <div class="flex items-center gap-3">
       <?php
-        $badgeClass = match($role) {
-            'super_admin' => 'badge-role-super',
-            'admin'       => 'badge-role-admin',
-            default       => 'badge-role-staff',
-        };
+        // FIX: replaced match() with if/elseif (PHP 7 compatible)
+        if ($role === 'super_admin') {
+            $badgeClass = 'badge-role-super';
+        } elseif ($role === 'admin') {
+            $badgeClass = 'badge-role-admin';
+        } else {
+            $badgeClass = 'badge-role-staff';
+        }
       ?>
       <div class="w-10 h-10 <?= $badgeClass ?> rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
         <?= mb_strtoupper(mb_substr($adminName, 0, 1)) ?>
       </div>
       <div class="min-w-0">
         <div class="text-white font-semibold text-sm truncate"><?= htmlspecialchars($adminName) ?></div>
-        <div class="text-slate-400 text-xs"><?= ucfirst(str_replace('_',' ',$role)) ?></div>
+        <div class="text-slate-400 text-xs"><?= ucfirst(str_replace('_', ' ', $role)) ?></div>
       </div>
     </div>
   </div>
@@ -82,23 +104,22 @@ $role      = $_SESSION[SESS_ROLE] ?? '';
     <?php
     $current = basename($_SERVER['PHP_SELF']);
 
-    // ── Always visible (all roles) ──
-    $alwaysNav = [
-      ['dashboard.php',      'layout-dashboard', 'Tableau de bord'],
-      ['manage_lessons.php', 'book-open',        'Gérer les cours'],
-      ['manage_quizzes.php', 'help-circle',      'Gérer les quiz'],
-    ];
+    $alwaysNav = array(
+      array('dashboard.php',      'layout-dashboard', 'Tableau de bord'),
+      array('manage_lessons.php', 'book-open',        'Gérer les cours'),
+      array('manage_quizzes.php', 'help-circle',      'Gérer les quiz'),
+    );
 
-    // ── super_admin only ──
-    $superNav = [
-      ['manage_subjects.php', 'layers',        'Gérer les matières'],
-      ['manage_levels.php',   'list-ordered',  'Gérer les niveaux'],
-      ['manage_users.php',    'users',         'Gérer les utilisateurs'],
-    ];
+    $superNav = array(
+      array('manage_subjects.php', 'layers',        'Gérer les matières'),
+      array('manage_levels.php',   'list-ordered',  'Gérer les niveaux'),
+      array('manage_users.php',    'users',         'Gérer les utilisateurs'),
+    );
     ?>
 
     <div class="nav-section">Général</div>
-    <?php foreach($alwaysNav as [$href,$icon,$label]): ?>
+    <?php foreach($alwaysNav as $navItem): ?>
+    <?php $href = $navItem[0]; $icon = $navItem[1]; $label = $navItem[2]; ?>
     <a href="<?= $href ?>"
        class="nav-item flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-400 text-sm font-medium cursor-pointer <?= $current===$href ? 'active-nav text-blue-400' : '' ?>">
       <i data-lucide="<?= $icon ?>" class="w-4 h-4 flex-shrink-0"></i>
@@ -108,7 +129,8 @@ $role      = $_SESSION[SESS_ROLE] ?? '';
 
     <?php if(isSuperAdmin()): ?>
     <div class="nav-section mt-3">Super Admin</div>
-    <?php foreach($superNav as [$href,$icon,$label]): ?>
+    <?php foreach($superNav as $navItem): ?>
+    <?php $href = $navItem[0]; $icon = $navItem[1]; $label = $navItem[2]; ?>
     <a href="<?= $href ?>"
        class="nav-item flex items-center gap-3 px-4 py-2.5 rounded-xl text-slate-400 text-sm font-medium cursor-pointer <?= $current===$href ? 'active-nav text-blue-400' : '' ?>">
       <i data-lucide="<?= $icon ?>" class="w-4 h-4 flex-shrink-0"></i>
@@ -121,7 +143,7 @@ $role      = $_SESSION[SESS_ROLE] ?? '';
   <!-- Lang + Logout -->
   <div class="px-4 py-4 border-t border-white/5 space-y-3">
     <div class="flex gap-1">
-      <?php foreach(['ar','fr','en'] as $l): ?>
+      <?php foreach(array('ar','fr','en') as $l): ?>
       <a href="?lang=<?= $l ?>"
          class="flex-1 text-center py-1 rounded-lg text-xs font-bold transition <?= $lang===$l ? 'bg-blue-600 text-white' : 'text-slate-500 hover:bg-white/5' ?>">
         <?= strtoupper($l) ?>
@@ -140,7 +162,7 @@ $role      = $_SESSION[SESS_ROLE] ?? '';
 <div class="flex-1 admin-content flex flex-col overflow-hidden">
   <!-- Top Bar -->
   <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
-    <h1 class="font-black text-gray-900 text-lg"><?= htmlspecialchars($pageTitle ?? '') ?></h1>
+    <h1 class="font-black text-gray-900 text-lg"><?= htmlspecialchars(isset($pageTitle) ? $pageTitle : '') ?></h1>
     <div class="flex items-center gap-3">
       <a href="../index.php" target="_blank"
          class="text-gray-400 hover:text-blue-600 text-sm flex items-center gap-1 transition">
@@ -148,19 +170,20 @@ $role      = $_SESSION[SESS_ROLE] ?? '';
         <?= t('home') ?>
       </a>
       <?php
-        $roleLabel = match($role) {
-            'super_admin' => '👑 Super Admin',
-            'admin'       => '🛡 Admin',
-            default       => '🔧 Staff',
-        };
-        $roleBg = match($role) {
-            'super_admin' => 'bg-purple-600',
-            'admin'       => 'bg-blue-700',
-            default       => 'bg-cyan-700',
-        };
+        // FIX: replaced match() with if/elseif (PHP 7 compatible)
+        if ($role === 'super_admin') {
+            $roleLabel = '👑 Super Admin';
+            $roleBg    = 'bg-purple-600';
+        } elseif ($role === 'admin') {
+            $roleLabel = '🛡 Admin';
+            $roleBg    = 'bg-blue-700';
+        } else {
+            $roleLabel = '🔧 Staff';
+            $roleBg    = 'bg-cyan-700';
+        }
       ?>
       <div class="<?= $roleBg ?> text-white text-xs font-bold px-3 py-1 rounded-full"><?= $roleLabel ?></div>
     </div>
   </header>
 
-  <main class="flex-1 overflow-y-auto p-6">
+  <main class="flex-1 overflow-y-auto p-6">  

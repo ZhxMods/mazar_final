@@ -4,13 +4,20 @@ require_once dirname(__DIR__) . '/includes/db.php';
 require_once dirname(__DIR__) . '/includes/functions.php';
 require_once dirname(__DIR__) . '/includes/auth_check.php';
 
+// ── COMPATIBILITY: alias SESS_UNAME → SESS_USERNAME ──────────
+if (!defined('SESS_UNAME') && defined('SESS_USERNAME')) {
+    define('SESS_UNAME', SESS_USERNAME);
+} elseif (!defined('SESS_UNAME')) {
+    define('SESS_UNAME', 'username');
+}
+
 $lang      = getCurrentLang();
 $dir       = getDirection();
 $userId    = (int)$_SESSION[SESS_USER_ID];
 $gradeId   = (int)$_SESSION[SESS_GRADE];
 $userXP    = (int)$_SESSION[SESS_XP];
 $userLevel = (int)$_SESSION[SESS_LEVEL];
-$userName  = $_SESSION[SESS_USERNAME] ?? 'Student';
+$userName  = isset($_SESSION[SESS_USERNAME]) ? $_SESSION[SESS_USERNAME] : 'Student';
 
 // Get student's grade level name
 $db      = getDB();
@@ -57,8 +64,8 @@ $welcome = isset($_GET['welcome']);
     .active-tab { background: rgba(255,255,255,0.15); }
     .level-badge { background: linear-gradient(135deg, <?= levelBadgeColor($userLevel) ?>, <?= levelBadgeColor(min($userLevel+1,10)) ?>); }
     .card { background:#fff; border-radius:1rem; box-shadow:0 1px 3px rgba(0,0,0,.07); }
-    .lesson-card { transition: transform .2s, box-shadow .2s; }
-    .lesson-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(59,130,246,.15); }
+    .lesson-card { transition: transform .2s, box-shadow .2s; cursor:pointer; }
+    .lesson-card:hover { transform:translateY(-3px); box-shadow:0 12px 30px rgba(59,130,246,.18); }
     .xp-bar-fill { transition: width 1s cubic-bezier(.4,0,.2,1); }
     .toast { position:fixed; top:20px; <?= $dir==='rtl'?'left':'right' ?>:20px; z-index:9999; }
     <?php if($dir==='rtl'): ?>
@@ -182,6 +189,13 @@ $welcome = isset($_GET['welcome']);
       #fab-btn svg { width: 22px; height: 22px; }
       #mazar-fab { bottom: 1.25rem; <?= $dir === 'rtl' ? 'left' : 'right' ?>: 1.25rem; }
     }
+
+    /* Lesson card overlay click */
+    .lesson-card-link {
+      position:absolute; inset:0; z-index:1;
+    }
+    .lesson-card { position:relative; }
+    .lesson-card .relative-actions { position:relative; z-index:2; }
   </style>
 </head>
 
@@ -354,27 +368,29 @@ $welcome = isset($_GET['welcome']);
       <?php endif; ?>
     </div>
 
-    <!-- Lesson Cards -->
+    <!-- Lesson Cards — NOW LINK TO lesson.php -->
     <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5" id="lessons-grid">
       <?php foreach($lessons as $lesson): ?>
       <?php
         $ytId   = $lesson['type']==='video' ? youtubeId($lesson['url']) : '';
         $thumb  = $ytId ? "https://img.youtube.com/vi/{$ytId}/hqdefault.jpg" : ($lesson['thumbnail'] ?: '');
         $completed = (bool)$lesson['completed'];
+        $lessonUrl = "lesson.php?id={$lesson['id']}";
       ?>
       <div class="card lesson-card overflow-hidden animate__animated animate__fadeInUp"
            data-lesson-id="<?= $lesson['id'] ?>"
            data-completed="<?= $completed ? '1' : '0' ?>">
 
-        <!-- Thumbnail -->
-        <div class="relative h-40 bg-gray-100 overflow-hidden">
+        <!-- Thumbnail — clickable to lesson page -->
+        <a href="<?= $lessonUrl ?>" class="block relative h-40 bg-gray-100 overflow-hidden group">
           <?php if($thumb): ?>
-          <img src="<?= htmlspecialchars($thumb) ?>" alt="" class="w-full h-full object-cover">
+          <img src="<?= htmlspecialchars($thumb) ?>" alt="" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
           <?php else: ?>
-          <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-200">
+          <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-200 group-hover:from-blue-200 group-hover:to-indigo-300 transition">
             <i data-lucide="<?= $lesson['type']==='video'?'play-circle':($lesson['type']==='pdf'?'file-text':'book-open') ?>" class="w-14 h-14 text-blue-400"></i>
           </div>
           <?php endif; ?>
+
           <!-- Type Badge -->
           <div class="absolute top-2 <?= $dir==='rtl'?'right-2':'left-2' ?> bg-black/60 text-white text-xs px-2 py-1 rounded-lg font-medium">
             <?= $lesson['type'] === 'video' ? '📹 Vidéo' : ($lesson['type']==='pdf' ? '📄 PDF' : '📗 Livre') ?>
@@ -383,18 +399,30 @@ $welcome = isset($_GET['welcome']);
           <div class="absolute top-2 <?= $dir==='rtl'?'left-2':'right-2' ?> bg-yellow-400 text-yellow-900 text-xs px-2 py-1 rounded-lg font-bold">
             +<?= $lesson['xp_reward'] ?> XP
           </div>
+          <!-- Completed overlay -->
           <?php if($completed): ?>
           <div class="absolute inset-0 bg-green-900/40 flex items-center justify-center">
             <div class="bg-green-500 rounded-full p-2">
               <i data-lucide="check" class="w-8 h-8 text-white"></i>
             </div>
           </div>
+          <?php else: ?>
+          <!-- Play/open hover indicator -->
+          <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition flex items-center justify-center">
+            <div class="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition transform scale-75 group-hover:scale-100">
+              <i data-lucide="<?= $lesson['type']==='video' ? 'play' : 'external-link' ?>" class="w-5 h-5 text-blue-700"></i>
+            </div>
+          </div>
           <?php endif; ?>
-        </div>
+        </a>
 
         <!-- Info -->
-        <div class="p-4">
-          <h3 class="font-bold text-gray-900 mb-1 line-clamp-2 text-sm"><?= htmlspecialchars($lesson['title']) ?></h3>
+        <div class="p-4 relative-actions">
+          <!-- Title links to lesson page -->
+          <a href="<?= $lessonUrl ?>" class="block mb-2">
+            <h3 class="font-bold text-gray-900 line-clamp-2 text-sm hover:text-blue-600 transition"><?= htmlspecialchars($lesson['title']) ?></h3>
+          </a>
+
           <?php if($lesson['duration']): ?>
           <p class="text-gray-400 text-xs mb-3 flex items-center gap-1">
             <i data-lucide="clock" class="w-3 h-3"></i>
@@ -403,24 +431,27 @@ $welcome = isset($_GET['welcome']);
           <?php endif; ?>
 
           <div class="flex gap-2">
-            <!-- Open Lesson -->
-            <a href="<?= htmlspecialchars($lesson['url']) ?>" target="_blank" rel="noopener"
+            <!-- Open Lesson Page — PRIMARY ACTION -->
+            <a href="<?= $lessonUrl ?>"
                class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-3 rounded-lg transition flex items-center justify-center gap-1">
-              <i data-lucide="<?= $lesson['type']==='video'?'play':'external-link' ?>" class="w-3.5 h-3.5"></i>
+              <i data-lucide="<?= $lesson['type']==='video'?'play':'book-open' ?>" class="w-3.5 h-3.5"></i>
               <?= $lesson['type']==='video' ? t('watch_video') : ($lesson['type']==='pdf'?t('open_pdf'):t('open_book')) ?>
             </a>
 
-            <!-- Complete Button -->
+            <!-- Quick Complete Button (also accessible from lesson page) -->
             <?php if(!$completed): ?>
             <button onclick="completeLesson(<?= $lesson['id'] ?>, this)"
-                    class="complete-btn bg-gray-100 hover:bg-green-500 hover:text-white text-gray-600 text-xs font-semibold py-2 px-3 rounded-lg transition flex items-center gap-1">
+                    class="complete-btn bg-gray-100 hover:bg-green-500 hover:text-white text-gray-600 text-xs font-semibold py-2 px-3 rounded-lg transition flex items-center gap-1"
+                    title="<?= t('complete_lesson') ?>">
               <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
-              <?= t('complete_lesson') ?>
+              <span class="hidden sm:inline"><?= t('complete_lesson') ?></span>
+              <span class="sm:hidden">✓</span>
             </button>
             <?php else: ?>
             <span class="bg-green-100 text-green-700 text-xs font-semibold py-2 px-3 rounded-lg flex items-center gap-1">
               <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
-              <?= t('completed') ?>
+              <span class="hidden sm:inline"><?= t('completed') ?></span>
+              <span class="sm:hidden">✓</span>
             </span>
             <?php endif; ?>
           </div>
