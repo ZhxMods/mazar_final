@@ -378,11 +378,12 @@ document.addEventListener('keydown', function(e) {
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof lucide !== 'undefined') lucide.createIcons();
 
-  // Start page timer for non-YouTube content
-  if (!window.LESSON_IS_YOUTUBE && !window.LESSON_ALREADY_DONE) {
-    startPageTimer();
+  // If lesson already completed, nothing to init — content hidden behind overlay
+  if (window.LESSON_ALREADY_DONE) return;
 
-    // Pause when tab hidden (anti-cheat)
+  // Start page timer for non-YouTube content
+  if (!window.LESSON_IS_YOUTUBE) {
+    startPageTimer();
     document.addEventListener('visibilitychange', function() {
       if (document.hidden) stopPageTimer();
       else if (!window.LESSON_ALREADY_DONE && !progressReady) startPageTimer();
@@ -390,20 +391,14 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // Load YouTube IFrame API if needed
-  if (window.LESSON_IS_YOUTUBE && !window.LESSON_ALREADY_DONE) {
+  if (window.LESSON_IS_YOUTUBE) {
     var tag = document.createElement('script');
     tag.src = 'https://www.youtube.com/iframe_api';
     document.head.appendChild(tag);
   }
 
   // Init PDF reader if needed
-  if (window.LESSON_PDF_URL && !window.LESSON_ALREADY_DONE) {
-    // Small delay so layout is stable
-    setTimeout(function() {
-      initPdfReader(window.LESSON_PDF_URL);
-    }, 200);
-  } else if (window.LESSON_PDF_URL && window.LESSON_ALREADY_DONE) {
-    // Still show PDF even if already completed
+  if (window.LESSON_PDF_URL) {
     setTimeout(function() {
       initPdfReader(window.LESSON_PDF_URL);
     }, 200);
