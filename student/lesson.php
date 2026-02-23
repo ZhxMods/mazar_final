@@ -1,7 +1,7 @@
 <?php
 // ============================================================
 //  MAZAR — student/lesson.php
-//  Individual lesson detail page with embedded media
+//  Anti-cheat: progress bar linked to duration before XP
 // ============================================================
 require_once dirname(__DIR__) . '/config.php';
 require_once dirname(__DIR__) . '/includes/db.php';
@@ -45,6 +45,22 @@ $title     = $lesson['title_loc'] ?: $lesson['title_fr'];
 $desc      = $lesson['desc_loc']  ?: $lesson['desc_fr'];
 $completed = (bool)$lesson['completed'];
 
+// ── Anti-cheat: record session start time ─────────────────────
+$sessionKey = 'ls_start_' . $userId . '_' . $lessonId;
+if (empty($_SESSION[$sessionKey])) {
+    $_SESSION[$sessionKey] = time();
+}
+
+// ── Required seconds to unlock XP ────────────────────────────
+// Duration stored in minutes. Require 80% of that, minimum 45s.
+$durationMins = (int)$lesson['duration'];
+$durationSecs = $durationMins * 60;
+// For videos with no duration, YouTube API will provide actual duration
+$requiredSecs = $durationSecs > 0 ? max(45, (int)($durationSecs * 0.80)) : 45;
+// Encode for JS
+$requiredSecsJs = $requiredSecs;
+$durationMinsFmt = $durationMins;
+
 // ── Media detection ───────────────────────────────────────────
 $ytId        = youtubeId($lesson['url']);
 $isYoutube   = (bool)$ytId;
@@ -56,9 +72,7 @@ $isDirectPdf = !$isMediaFire && (
 );
 
 $embedUrl = '';
-if ($isYoutube) {
-    $embedUrl = "https://www.youtube.com/embed/{$ytId}?rel=0&modestbranding=1&color=white";
-} elseif ($isDirectPdf) {
+if ($isDirectPdf) {
     $embedUrl = "https://docs.google.com/viewer?url=" . urlencode($lesson['url']) . "&embedded=true";
 }
 
@@ -91,13 +105,13 @@ $relStmt->execute([$userId, $lesson['sid'], $lessonId]);
 $related = $relStmt->fetchAll();
 
 // ── User state ────────────────────────────────────────────────
-$userXP    = (int)$_SESSION[SESS_XP];
-$userLevel = (int)$_SESSION[SESS_LEVEL];
+$userXP      = (int)$_SESSION[SESS_XP];
+$userLevel   = (int)$_SESSION[SESS_LEVEL];
 $progressPct = xpProgressPercent($userXP, $userLevel);
 
-$_typeLabels = ['video'=>'Vidéo','pdf'=>'PDF','book'=>'Livre'];
-$_typeIcons  = ['video'=>'play-circle','pdf'=>'file-text','book'=>'book-open'];
-$_typeColors = ['video'=>'#3B82F6','pdf'=>'#10B981','book'=>'#8B5CF6'];
+$_typeLabels = ['video' => 'Vidéo', 'pdf' => 'PDF',    'book' => 'Livre'];
+$_typeIcons  = ['video' => 'play-circle', 'pdf' => 'file-text', 'book' => 'book-open'];
+$_typeColors = ['video' => '#3B82F6', 'pdf' => '#10B981', 'book' => '#8B5CF6'];
 $typeLabel   = isset($_typeLabels[$lesson['type']]) ? $_typeLabels[$lesson['type']] : 'Cours';
 $typeIcon    = isset($_typeIcons[$lesson['type']])  ? $_typeIcons[$lesson['type']]  : 'book';
 $typeColor   = isset($_typeColors[$lesson['type']]) ? $_typeColors[$lesson['type']] : '#6B7280';
@@ -139,10 +153,11 @@ $typeColor   = isset($_typeColors[$lesson['type']]) ? $_typeColors[$lesson['type
       box-shadow: 0 20px 60px rgba(0,0,0,.25);
     }
     .media-wrapper.video-ratio {
-      padding-bottom: 56.25%; /* 16:9 */
+      padding-bottom: 56.25%;
       height: 0;
     }
-    .media-wrapper iframe {
+    .media-wrapper iframe,
+    .media-wrapper #yt-player {
       position: absolute;
       top: 0; left: 0;
       width: 100%; height: 100%;
@@ -167,6 +182,57 @@ $typeColor   = isset($_typeColors[$lesson['type']]) ? $_typeColors[$lesson['type
     /* ── Cards ── */
     .card { background: #fff; border-radius: 1rem; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
 
+    /* ── PROGRESS BAR SYSTEM ── */
+    .progress-section {
+      background: linear-gradient(135deg, #f8fafc, #eff6ff);
+      border: 1.5px solid #dbeafe;
+      border-radius: .875rem;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .progress-section.completed-state {
+      background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+      border-color: #86efac;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      background: #e2e8f0;
+      border-radius: 99px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,.1);
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width .5s cubic-bezier(.4,0,.2,1);
+      position: relative;
+      overflow: hidden;
+    }
+    .progress-fill::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.4) 50%, transparent 100%);
+      animation: progressShimmer 1.5s ease-in-out infinite;
+    }
+    @keyframes progressShimmer {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    .progress-fill.active {
+      background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+      box-shadow: 0 0 8px rgba(59,130,246,.5);
+    }
+    .progress-fill.done {
+      background: linear-gradient(90deg, #10b981, #059669);
+      box-shadow: 0 0 8px rgba(16,185,129,.5);
+    }
+    .progress-fill.done::after { animation: none; }
+
     /* ── Complete Button ── */
     .complete-btn-main {
       width: 100%;
@@ -181,22 +247,73 @@ $typeColor   = isset($_typeColors[$lesson['type']]) ? $_typeColors[$lesson['type
       align-items: center;
       justify-content: center;
       gap: .5rem;
-      transition: all .2s;
+      transition: all .25s cubic-bezier(.34,1.56,.64,1);
+      position: relative;
+      overflow: hidden;
+    }
+    .complete-btn-main.locked {
+      background: #f1f5f9;
+      color: #94a3b8;
+      cursor: not-allowed;
+      border: 2px dashed #cbd5e1;
     }
     .complete-btn-main.pending {
       background: linear-gradient(135deg, #f59e0b, #d97706);
       color: #fff;
       box-shadow: 0 4px 20px rgba(245,158,11,.35);
     }
-    .complete-btn-main.pending:hover {
+    .complete-btn-main.pending:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 8px 28px rgba(245,158,11,.45);
+      box-shadow: 0 8px 28px rgba(245,158,11,.5);
+    }
+    .complete-btn-main.pending::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,.15), transparent);
+      border-radius: inherit;
     }
     .complete-btn-main.done {
-      background: #dcfce7;
-      color: #166534;
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
       cursor: default;
-      border: 2px solid #bbf7d0;
+      box-shadow: 0 4px 16px rgba(16,185,129,.35);
+    }
+
+    /* Lock icon pulse */
+    @keyframes lockPulse {
+      0%,100% { opacity: .5; }
+      50%      { opacity: 1; }
+    }
+    .lock-pulse { animation: lockPulse 2s ease-in-out infinite; }
+
+    /* ── XP Bars ── */
+    .xp-bar { height: 6px; border-radius: 99px; background: #e2e8f0; overflow: hidden; }
+    .xp-bar-inner { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #f59e0b, #fbbf24); transition: width .8s ease; }
+
+    /* ── Time display ── */
+    .time-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      font-size: .72rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      padding: .2rem .6rem;
+      border-radius: 999px;
+      letter-spacing: .02em;
+    }
+    .time-pill.waiting {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    .time-pill.running {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .time-pill.ready {
+      background: #d1fae5;
+      color: #065f46;
     }
 
     /* ── Related lesson cards ── */
@@ -218,16 +335,14 @@ $typeColor   = isset($_typeColors[$lesson['type']]) ? $_typeColors[$lesson['type
       transform: translateX(<?= $dir === 'rtl' ? '-3px' : '3px' ?>);
     }
     .related-thumb {
-      width: 72px;
-      height: 48px;
+      width: 72px; height: 48px;
       border-radius: .5rem;
       object-fit: cover;
       flex-shrink: 0;
       background: #e5e7eb;
     }
     .related-thumb-placeholder {
-      width: 72px;
-      height: 48px;
+      width: 72px; height: 48px;
       border-radius: .5rem;
       flex-shrink: 0;
       display: flex;
@@ -236,7 +351,18 @@ $typeColor   = isset($_typeColors[$lesson['type']]) ? $_typeColors[$lesson['type
       background: linear-gradient(135deg, #dbeafe, #ede9fe);
     }
 
-    /* ── Open external button ── */
+    /* ── Type badge ── */
+    .type-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      font-size: .75rem;
+      font-weight: 700;
+      padding: .3rem .75rem;
+      border-radius: 999px;
+    }
+
+    /* ── Open external ── */
     .open-external {
       display: inline-flex;
       align-items: center;
@@ -254,37 +380,19 @@ $typeColor   = isset($_typeColors[$lesson['type']]) ? $_typeColors[$lesson['type
       box-shadow: 0 8px 28px rgba(59,130,246,.35);
     }
 
-    /* ── XP Progress ── */
-    .xp-bar { height: 6px; border-radius: 99px; background: #e2e8f0; overflow: hidden; }
-    .xp-bar-inner { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #f59e0b, #fbbf24); transition: width .8s ease; }
-
     /* ── Description ── */
     .desc-content {
       font-size: .9rem;
       line-height: 1.8;
       color: #475569;
     }
-    .desc-content p { margin-bottom: .75rem; }
-
-    /* ── Badge ── */
-    .type-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: .35rem;
-      font-size: .75rem;
-      font-weight: 700;
-      padding: .3rem .75rem;
-      border-radius: 999px;
-    }
 
     /* ── FAB ── */
-    #mazar-fab {
+    #fab-btn {
       position: fixed;
       bottom: 1.5rem;
       <?= $dir === 'rtl' ? 'left' : 'right' ?>: 1.5rem;
       z-index: 9000;
-    }
-    #fab-btn {
       width: 54px; height: 54px;
       border-radius: 50%;
       display: flex;
@@ -294,7 +402,6 @@ $typeColor   = isset($_typeColors[$lesson['type']]) ? $_typeColors[$lesson['type
       box-shadow: 0 0 0 4px rgba(29,78,216,.18), 0 8px 28px rgba(30,58,138,.45);
       text-decoration: none;
       transition: transform .22s cubic-bezier(.34,1.56,.64,1), box-shadow .22s;
-      position: relative;
     }
     #fab-btn:hover {
       transform: scale(1.12) translateY(-2px);
@@ -326,12 +433,12 @@ $typeColor   = isset($_typeColors[$lesson['type']]) ? $_typeColors[$lesson['type
       from { opacity: 0; transform: translateY(16px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-    .fade-up { animation: fadeUp .4s ease both; }
+    .fade-up    { animation: fadeUp .4s ease both; }
     .fade-up-d1 { animation-delay: .1s; }
     .fade-up-d2 { animation-delay: .2s; }
     .fade-up-d3 { animation-delay: .3s; }
 
-    /* ── Toast container ── */
+    /* ── Toast ── */
     #toast-container { position: fixed; top: 20px; <?= $dir === 'rtl' ? 'left' : 'right' ?>: 20px; z-index: 9999; }
 
     @media (max-width: 640px) {
@@ -343,36 +450,27 @@ $typeColor   = isset($_typeColors[$lesson['type']]) ? $_typeColors[$lesson['type
 
 <div id="toast-container" class="space-y-2"></div>
 
-<!-- ══════════════════════════════════════
-     TOP NAV
-══════════════════════════════════════ -->
+<!-- ══ TOP NAV ══ -->
 <nav class="top-nav px-4 sm:px-6 py-3 flex items-center gap-3">
-  <!-- Back -->
   <a href="dashboard.php?tab=lessons&subject=<?= $lesson['sid'] ?>"
      class="flex items-center gap-1.5 text-white/80 hover:text-white text-sm font-semibold transition bg-white/10 hover:bg-white/20 px-3 py-2 rounded-xl flex-shrink-0">
     <i data-lucide="arrow-<?= $dir === 'rtl' ? 'right' : 'left' ?>" class="w-4 h-4"></i>
     <span class="hidden sm:inline">Retour</span>
   </a>
 
-  <!-- Breadcrumb -->
   <div class="flex items-center gap-2 text-white/70 text-xs sm:text-sm flex-1 min-w-0 overflow-hidden">
-    <span class="truncate hidden sm:inline"><?= htmlspecialchars($lesson['level_name']) ?></span>
+    <span class="text-white/90 font-semibold truncate hidden sm:inline"><?= htmlspecialchars($lesson['subject_name']) ?></span>
     <i data-lucide="chevron-right" class="w-3.5 h-3.5 flex-shrink-0 hidden sm:inline"></i>
-    <span class="text-white/90 font-semibold truncate"><?= htmlspecialchars($lesson['subject_name']) ?></span>
-    <i data-lucide="chevron-right" class="w-3.5 h-3.5 flex-shrink-0"></i>
     <span class="text-white font-bold truncate"><?= htmlspecialchars($title) ?></span>
   </div>
 
-  <!-- XP badge -->
   <div class="flex items-center gap-2 bg-yellow-400/20 border border-yellow-400/30 rounded-xl px-3 py-1.5 flex-shrink-0">
     <i data-lucide="zap" class="w-3.5 h-3.5 text-yellow-300"></i>
     <span class="text-yellow-200 font-bold text-xs sm:text-sm"><span id="header-xp"><?= $userXP ?></span> XP</span>
   </div>
 </nav>
 
-<!-- ══════════════════════════════════════
-     MAIN LAYOUT
-══════════════════════════════════════ -->
+<!-- ══ MAIN LAYOUT ══ -->
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
   <div class="flex flex-col lg:flex-row gap-6">
 
@@ -382,19 +480,12 @@ $typeColor   = isset($_typeColors[$lesson['type']]) ? $_typeColors[$lesson['type
       <!-- MEDIA PLAYER -->
       <div class="fade-up">
         <?php if ($isYoutube): ?>
-        <!-- YouTube Embed -->
+        <!-- YouTube IFrame API Player (tracks actual watch time) -->
         <div class="media-wrapper video-ratio">
-          <iframe
-            src="<?= htmlspecialchars($embedUrl) ?>"
-            title="<?= htmlspecialchars($title) ?>"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowfullscreen
-            loading="lazy">
-          </iframe>
+          <div id="yt-player"></div>
         </div>
 
         <?php elseif ($isDirectPdf): ?>
-        <!-- Google Docs PDF Viewer -->
         <div class="media-wrapper video-ratio">
           <iframe
             src="<?= htmlspecialchars($embedUrl) ?>"
@@ -404,7 +495,6 @@ $typeColor   = isset($_typeColors[$lesson['type']]) ? $_typeColors[$lesson['type
         </div>
 
         <?php elseif ($lesson['type'] === 'pdf' || $lesson['type'] === 'book'): ?>
-        <!-- MediaFire / External Document — show styled preview -->
         <div class="media-placeholder" style="border-radius:1.25rem; box-shadow:0 20px 60px rgba(0,0,0,.2);">
           <?php if ($thumb): ?>
             <img src="<?= htmlspecialchars($thumb) ?>" alt="" class="media-thumb" style="border-radius:1.25rem;">
@@ -418,7 +508,6 @@ $typeColor   = isset($_typeColors[$lesson['type']]) ? $_typeColors[$lesson['type
             </div>
           <?php endif; ?>
         </div>
-        <!-- Open button below -->
         <div class="mt-4 flex gap-3 flex-wrap">
           <a href="<?= htmlspecialchars($lesson['url']) ?>" target="_blank" rel="noopener"
              class="open-external bg-blue-600 hover:bg-blue-700 text-white">
@@ -428,8 +517,7 @@ $typeColor   = isset($_typeColors[$lesson['type']]) ? $_typeColors[$lesson['type
         </div>
 
         <?php else: ?>
-        <!-- Unknown type — show thumbnail or placeholder -->
-        <div class="media-placeholder" style="border-radius:1.25rem; box-shadow:0 20px 60px rgba(0,0,0,.2);">
+        <div class="media-placeholder" style="border-radius:1.25rem;box-shadow:0 20px 60px rgba(0,0,0,.2);">
           <?php if ($thumb): ?>
             <img src="<?= htmlspecialchars($thumb) ?>" alt="" class="media-thumb" style="border-radius:1.25rem;">
           <?php else: ?>
@@ -450,7 +538,6 @@ $typeColor   = isset($_typeColors[$lesson['type']]) ? $_typeColors[$lesson['type
 
       <!-- ── LESSON INFO CARD ── -->
       <div class="card mt-5 p-5 sm:p-6 fade-up fade-up-d1">
-        <!-- Type badge + duration -->
         <div class="flex items-center gap-2 mb-3 flex-wrap">
           <span class="type-badge text-white" style="background:<?= $typeColor ?>20; color:<?= $typeColor ?>; border:1px solid <?= $typeColor ?>30;">
             <i data-lucide="<?= $typeIcon ?>" style="width:12px;height:12px;"></i>
@@ -476,7 +563,6 @@ $typeColor   = isset($_typeColors[$lesson['type']]) ? $_typeColors[$lesson['type
           </span>
         </div>
 
-        <!-- Title -->
         <h1 class="text-xl sm:text-2xl font-black text-gray-900 mb-1 leading-tight">
           <?= htmlspecialchars($title) ?>
         </h1>
@@ -484,7 +570,6 @@ $typeColor   = isset($_typeColors[$lesson['type']]) ? $_typeColors[$lesson['type
         <p class="text-gray-400 text-sm mb-4"><?= htmlspecialchars($lesson['title_fr']) ?></p>
         <?php endif; ?>
 
-        <!-- Description -->
         <?php if ($desc): ?>
         <div class="mt-4 pt-4 border-t border-gray-100">
           <h2 class="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
@@ -495,7 +580,6 @@ $typeColor   = isset($_typeColors[$lesson['type']]) ? $_typeColors[$lesson['type
         </div>
         <?php endif; ?>
 
-        <!-- External link (always available for YouTube too) -->
         <div class="mt-4 pt-4 border-t border-gray-100 flex items-center gap-2">
           <a href="<?= htmlspecialchars($lesson['url']) ?>" target="_blank" rel="noopener"
              class="text-blue-600 hover:text-blue-700 text-sm font-semibold flex items-center gap-1.5 transition">
@@ -510,29 +594,92 @@ $typeColor   = isset($_typeColors[$lesson['type']]) ? $_typeColors[$lesson['type
     <!-- ── RIGHT COLUMN — Sidebar ── -->
     <div class="lg:w-80 xl:w-96 flex-shrink-0 space-y-4">
 
-      <!-- Complete lesson card -->
-      <div class="card p-5 fade-up fade-up-d1">
-        <h3 class="font-bold text-gray-800 text-sm mb-3 flex items-center gap-2">
-          <i data-lucide="check-circle" class="w-4 h-4 text-green-500"></i>
+      <!-- ════════════════════════════════════
+           COMPLETE LESSON CARD with Progress
+      ════════════════════════════════════ -->
+      <div class="card p-5 fade-up fade-up-d1" id="complete-card">
+        <h3 class="font-bold text-gray-800 text-sm mb-4 flex items-center gap-2">
+          <i data-lucide="shield-check" class="w-4 h-4 text-blue-500"></i>
           Progression de la leçon
         </h3>
 
         <?php if ($completed): ?>
+        <!-- ── Already completed ── -->
+        <div class="progress-section completed-state">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-green-700">Leçon terminée ✓</span>
+            <span class="time-pill ready">
+              <i data-lucide="check-circle" style="width:10px;height:10px;"></i>
+              Complet
+            </span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill done" style="width:100%;"></div>
+          </div>
+          <p class="text-green-600 text-xs mt-2 font-medium">
+            ✅ +<?= $lesson['xp_reward'] ?> XP déjà gagnés
+          </p>
+        </div>
         <button class="complete-btn-main done" disabled>
           <i data-lucide="check-circle-2" class="w-5 h-5"></i>
           Leçon terminée !
         </button>
-        <p class="text-green-600 text-xs text-center mt-2 font-medium">✅ +<?= $lesson['xp_reward'] ?> XP déjà gagnés</p>
+
         <?php else: ?>
-        <button id="complete-btn-main" onclick="completeLessonPage(<?= $lessonId ?>)"
-                class="complete-btn-main pending">
-          <i data-lucide="check-circle" class="w-5 h-5"></i>
-          Marquer comme terminé
+        <!-- ── Progress tracking ── -->
+        <div class="progress-section" id="progress-section">
+          <!-- Header row -->
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-gray-600" id="progress-label">
+              <?= $isYoutube ? 'Temps de visionnage' : ($durationMins > 0 ? 'Temps de lecture' : 'Présence sur la page') ?>
+            </span>
+            <span class="time-pill waiting" id="time-pill">
+              <i data-lucide="clock" style="width:10px;height:10px;" id="time-pill-icon"></i>
+              <span id="time-pill-text">En attente...</span>
+            </span>
+          </div>
+
+          <!-- Progress track -->
+          <div class="progress-track" style="margin-bottom:.6rem;">
+            <div class="progress-fill" id="lesson-progress-bar" style="width:0%"></div>
+          </div>
+
+          <!-- Time counters -->
+          <div class="flex justify-between items-center text-xs text-gray-400">
+            <span>
+              <span id="elapsed-display">0:00</span>
+              <span class="text-gray-300"> / </span>
+              <span id="required-display"><?= gmdate('G:i', $requiredSecs) ?></span>
+            </span>
+            <span id="remaining-hint" class="font-medium text-blue-500">
+              <?= $durationMins > 0 ? 'Requis : ' . $durationMins . ' min' : 'Requis : 45 sec' ?>
+            </span>
+          </div>
+
+          <!-- Hint text -->
+          <p class="text-xs text-gray-400 mt-2 leading-relaxed" id="progress-hint-text">
+            <?php if ($isYoutube): ?>
+              Regardez la vidéo pour débloquer les <strong class="text-yellow-600">+<?= $lesson['xp_reward'] ?> XP</strong>
+            <?php else: ?>
+              Restez sur cette page pour débloquer les <strong class="text-yellow-600">+<?= $lesson['xp_reward'] ?> XP</strong>
+            <?php endif; ?>
+          </p>
+        </div>
+
+        <!-- Complete Button (locked until progress done) -->
+        <button id="complete-btn-main"
+                class="complete-btn-main locked"
+                disabled
+                onclick="completeLessonPage(<?= $lessonId ?>)">
+          <i data-lucide="lock" class="w-5 h-5 lock-pulse" id="btn-icon"></i>
+          <span id="btn-text">Terminer la leçon</span>
         </button>
-        <p class="text-gray-400 text-xs text-center mt-2">Gagnez +<?= $lesson['xp_reward'] ?> XP en complétant cette leçon</p>
+        <p class="text-gray-400 text-xs text-center mt-2" id="btn-subtext">
+          Regardez la leçon pour débloquer ce bouton
+        </p>
         <?php endif; ?>
 
-        <!-- XP Progress -->
+        <!-- XP Progress Bar -->
         <div class="mt-4 pt-4 border-t border-gray-100">
           <div class="flex justify-between text-xs text-gray-500 mb-1.5">
             <span>Niveau <?= $userLevel ?></span>
@@ -577,13 +724,13 @@ $typeColor   = isset($_typeColors[$lesson['type']]) ? $_typeColors[$lesson['type
         </h3>
         <div class="space-y-2">
           <?php foreach ($related as $rel):
-            $relTitle  = $rel['title'] ?: $rel['title_fr'];
-            $relYt     = youtubeId($rel['url']);
-            $relThumb  = $rel['thumbnail'] ?: ($relYt ? "https://img.youtube.com/vi/{$relYt}/hqdefault.jpg" : '');
+            $relTitle = $rel['title'] ?: $rel['title_fr'];
+            $relYt    = youtubeId($rel['url']);
+            $relThumb = $rel['thumbnail'] ?: ($relYt ? "https://img.youtube.com/vi/{$relYt}/hqdefault.jpg" : '');
             $_ri = ['video'=>'play','pdf'=>'file-text','book'=>'book-open'];
             $_rc = ['video'=>'#3B82F6','pdf'=>'#10B981','book'=>'#8B5CF6'];
-            $relIcon   = isset($_ri[$rel['type']]) ? $_ri[$rel['type']] : 'book';
-            $relColor  = isset($_rc[$rel['type']]) ? $_rc[$rel['type']] : '#6B7280';
+            $relIcon  = isset($_ri[$rel['type']]) ? $_ri[$rel['type']] : 'book';
+            $relColor = isset($_rc[$rel['type']]) ? $_rc[$rel['type']] : '#6B7280';
           ?>
           <a href="lesson.php?id=<?= $rel['id'] ?>" class="related-card">
             <?php if ($relThumb): ?>
@@ -619,99 +766,323 @@ $typeColor   = isset($_typeColors[$lesson['type']]) ? $_typeColors[$lesson['type
       <?php endif; ?>
 
     </div><!-- /right column -->
-
   </div>
 </div>
 
 <!-- MAZAR AI FAB -->
-<a href="mazar-ai.php" id="fab-btn" aria-label="MAZAR AI">
+<a href="mazar-ai.php" id="fab-btn" aria-label="MAZAR AI" style="position:relative;">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
     <path d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z"/>
     <path d="M18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z"/>
   </svg>
   <span class="fab-online"></span>
 </a>
-<div id="mazar-fab"></div>
 
+<!-- ============================================================
+     SCRIPTS
+============================================================ -->
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 <script src="../assets/js/xp-system.js"></script>
+
 <script>
-  lucide.createIcons();
+/* ── Config injected from PHP ─────────────────────────── */
+window.MAZAR_XP        = <?= $userXP ?>;
+window.MAZAR_LEVEL     = <?= $userLevel ?>;
+window.MAZAR_CSRF      = '<?= csrfToken() ?>';
+window.MAZAR_AJAX      = '../ajax/complete_lesson.php';
 
-  window.MAZAR_XP    = <?= $userXP ?>;
-  window.MAZAR_LEVEL = <?= $userLevel ?>;
-  window.MAZAR_CSRF  = '<?= csrfToken() ?>';
-  window.MAZAR_AJAX  = '../ajax/complete_lesson.php';
+var IS_YOUTUBE    = <?= $isYoutube ? 'true' : 'false' ?>;
+var YT_VIDEO_ID   = '<?= $ytId ?>';
+var REQUIRED_SECS = <?= $requiredSecsJs ?>;
+var ALREADY_DONE  = <?= $completed ? 'true' : 'false' ?>;
+var LESSON_TYPE   = '<?= $lesson['type'] ?>';
+var LESSON_MINS   = <?= $durationMins ?>;
 
-  async function completeLessonPage(lessonId) {
-    const btn = document.getElementById('complete-btn-main');
-    if (!btn || btn.classList.contains('loading')) return;
+/* ── State ─────────────────────────────────────────────── */
+var elapsedSecs   = 0;       // total qualifying seconds accumulated
+var progressReady = false;   // unlocked?
+var trackInterval = null;    // setInterval handle
+var ytPlayer      = null;    // YouTube player object
+var ytDuration    = 0;       // actual video duration in seconds
 
-    btn.classList.add('loading');
-    const orig = btn.innerHTML;
-    btn.innerHTML = '<span style="display:inline-block;animation:spin .7s linear infinite">⟳</span> Traitement...';
-    btn.disabled = true;
+/* ── DOM helpers ──────────────────────────────────────── */
+function qs(id) { return document.getElementById(id); }
 
-    try {
-      const fd = new FormData();
-      fd.append('lesson_id',  lessonId);
-      fd.append('csrf_token', window.MAZAR_CSRF);
+/* ── Format seconds as M:SS ──────────────────────────── */
+function fmtTime(s) {
+  s = Math.floor(s);
+  var m = Math.floor(s / 60);
+  var sec = s % 60;
+  return m + ':' + (sec < 10 ? '0' : '') + sec;
+}
 
-      const res  = await fetch(window.MAZAR_AJAX, { method:'POST', body:fd, credentials:'same-origin' });
-      const data = await res.json();
+/* ── Update progress bar UI ──────────────────────────── */
+function updateProgressUI() {
+  if (ALREADY_DONE) return;
 
-      if (data.success) {
-        // Animate XP
-        floatXP(<?= $lesson['xp_reward'] ?>, btn);
-        showToast('+<?= $lesson['xp_reward'] ?> XP ! Leçon terminée avec succès ! 🎓', 'xp');
+  var pct = Math.min(100, (elapsedSecs / REQUIRED_SECS) * 100);
+  var bar = qs('lesson-progress-bar');
+  var pill = qs('time-pill');
+  var pillTxt = qs('time-pill-text');
+  var elapsedEl = qs('elapsed-display');
+  var btnIcon = qs('btn-icon');
+  var btnText = qs('btn-text');
+  var btnSub  = qs('btn-subtext');
+  var btn     = qs('complete-btn-main');
 
-        // Update header XP
-        const hXP = document.getElementById('header-xp');
-        if (hXP) countUp(hXP, window.MAZAR_XP, data.new_xp);
+  if (bar)       bar.style.width = pct + '%';
+  if (elapsedEl) elapsedEl.textContent = fmtTime(elapsedSecs);
 
-        // Update XP display
-        const xpDisp = document.getElementById('xp-display');
-        if (xpDisp) countUp(xpDisp, window.MAZAR_XP, data.new_xp);
+  if (pct >= 100 && !progressReady) {
+    /* ── UNLOCK ── */
+    progressReady = true;
+    if (trackInterval) clearInterval(trackInterval);
 
-        // Update bar
-        setTimeout(() => {
-          const bar = document.getElementById('xp-bar-fill');
-          if (bar) bar.style.width = data.percent + '%';
-        }, 300);
+    if (bar)      { bar.classList.remove('active'); bar.classList.add('done'); }
+    if (pill)     { pill.className = 'time-pill ready'; }
+    if (pillTxt)  pillTxt.textContent = 'Prêt !';
 
-        window.MAZAR_XP    = data.new_xp;
-        window.MAZAR_LEVEL = data.new_level;
+    // Update progress section background
+    var section = qs('progress-section');
+    if (section) {
+      section.style.background = 'linear-gradient(135deg, #f0fdf4, #dcfce7)';
+      section.style.borderColor = '#86efac';
+    }
 
-        // Replace button
-        btn.className = 'complete-btn-main done';
-        btn.innerHTML = '<i data-lucide="check-circle-2" class="w-5 h-5"></i> Leçon terminée !';
-        btn.disabled = true;
-        lucide.createIcons();
+    if (qs('progress-hint-text')) {
+      qs('progress-hint-text').innerHTML = '🎉 Excellent ! Vous pouvez maintenant gagner <strong class="text-green-600">+<?= $lesson['xp_reward'] ?> XP</strong>';
+    }
 
-        // Level up?
-        if (data.level_up) {
-          setTimeout(() => showLevelUp(data.new_level), 800);
-        }
-
-      } else if (data.message === 'Already completed') {
-        showToast('Cette leçon est déjà marquée comme terminée.', 'info');
-        btn.className = 'complete-btn-main done';
-        btn.innerHTML = '<i data-lucide="check-circle-2" class="w-5 h-5"></i> Leçon terminée !';
-        btn.disabled = true;
-        lucide.createIcons();
-      } else {
-        showToast('Erreur : ' + (data.message || 'Réessayez.'), 'error');
-        btn.innerHTML = orig;
-        btn.disabled = false;
-        btn.classList.remove('loading');
-      }
-    } catch (err) {
-      showToast('Erreur de connexion.', 'error');
-      btn.innerHTML = orig;
+    // Unlock button
+    if (btn) {
+      btn.classList.remove('locked');
+      btn.classList.add('pending');
       btn.disabled = false;
+    }
+    if (btnIcon) {
+      btnIcon.setAttribute('data-lucide', 'check-circle');
+      btnIcon.classList.remove('lock-pulse');
+      lucide.createIcons();
+    }
+    if (btnText)  btnText.textContent = 'Marquer comme terminé';
+    if (btnSub)   btnSub.textContent  = 'Cliquez pour gagner +<?= $lesson['xp_reward'] ?> XP !';
+
+    // Gentle ping toast
+    showToast('🎓 Leçon complète ! Cliquez pour gagner vos XP.', 'info', 3000);
+
+  } else if (!progressReady) {
+    /* ── Still in progress ── */
+    if (bar && !bar.classList.contains('active')) bar.classList.add('active');
+    if (pill)    { pill.className = 'time-pill running'; }
+    if (pillTxt) pillTxt.textContent = fmtTime(REQUIRED_SECS - elapsedSecs) + ' restant';
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   YOUTUBE TRACKING
+══════════════════════════════════════════════════════ */
+<?php if ($isYoutube): ?>
+
+// Load YouTube IFrame API
+(function() {
+  var tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  var first = document.getElementsByTagName('script')[0];
+  first.parentNode.insertBefore(tag, first);
+})();
+
+// Called by YouTube API when ready
+function onYouTubeIframeAPIReady() {
+  ytPlayer = new YT.Player('yt-player', {
+    videoId: YT_VIDEO_ID,
+    playerVars: {
+      rel: 0,
+      modestbranding: 1,
+      color: 'white',
+      enablejsapi: 1
+    },
+    events: {
+      onReady: function(e) {
+        ytDuration = e.target.getDuration() || 0;
+
+        // If no duration in DB, derive required secs from actual video length (80%)
+        if (LESSON_MINS === 0 && ytDuration > 0) {
+          REQUIRED_SECS = Math.max(45, Math.floor(ytDuration * 0.80));
+          if (qs('required-display')) qs('required-display').textContent = fmtTime(REQUIRED_SECS);
+          if (qs('remaining-hint'))   qs('remaining-hint').textContent   = 'Requis : ' + Math.ceil(REQUIRED_SECS / 60) + ' min';
+        }
+      },
+      onStateChange: function(e) {
+        if (e.data === YT.PlayerState.PLAYING) {
+          startYTTracking();
+        } else {
+          stopYTTracking();
+        }
+      }
+    }
+  });
+}
+
+var ytTrackHandle = null;
+
+function startYTTracking() {
+  if (ALREADY_DONE || progressReady) return;
+  if (ytTrackHandle) return; // already running
+  ytTrackHandle = setInterval(function() {
+    elapsedSecs++;
+    updateProgressUI();
+    if (progressReady) {
+      clearInterval(ytTrackHandle);
+      ytTrackHandle = null;
+    }
+  }, 1000);
+}
+
+function stopYTTracking() {
+  if (ytTrackHandle) {
+    clearInterval(ytTrackHandle);
+    ytTrackHandle = null;
+  }
+}
+
+<?php else: ?>
+/* ══════════════════════════════════════════════════════
+   TIMER-BASED TRACKING (PDF / Book / other)
+══════════════════════════════════════════════════════ */
+
+function startPageTimer() {
+  if (ALREADY_DONE || progressReady) return;
+  if (trackInterval) return;
+  trackInterval = setInterval(function() {
+    elapsedSecs++;
+    updateProgressUI();
+    if (progressReady) {
+      clearInterval(trackInterval);
+      trackInterval = null;
+    }
+  }, 1000);
+}
+
+// Start timer when page is loaded and visible
+document.addEventListener('DOMContentLoaded', function() {
+  startPageTimer();
+
+  // Pause timer if tab is hidden (anti-cheat)
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+      if (trackInterval) {
+        clearInterval(trackInterval);
+        trackInterval = null;
+      }
+    } else {
+      startPageTimer();
+    }
+  });
+});
+
+<?php endif; ?>
+
+/* ══════════════════════════════════════════════════════
+   COMPLETE LESSON (with server-side validation)
+══════════════════════════════════════════════════════ */
+async function completeLessonPage(lessonId) {
+  if (!progressReady) {
+    showToast('⏳ Regardez/lisez la leçon entièrement d\'abord !', 'error', 3000);
+    return;
+  }
+
+  var btn = qs('complete-btn-main');
+  if (!btn || btn.disabled || btn.classList.contains('done')) return;
+  if (btn.classList.contains('loading')) return;
+
+  btn.classList.add('loading');
+  var orig = btn.innerHTML;
+  btn.innerHTML = '<span style="display:inline-block;animation:spin .7s linear infinite">⟳</span> Traitement...';
+  btn.disabled = true;
+
+  try {
+    var fd = new FormData();
+    fd.append('lesson_id',    lessonId);
+    fd.append('csrf_token',   window.MAZAR_CSRF);
+    fd.append('elapsed_secs', Math.floor(elapsedSecs)); // pass elapsed for server check
+
+    var res  = await fetch(window.MAZAR_AJAX, { method: 'POST', body: fd, credentials: 'same-origin' });
+    var data = await res.json();
+
+    if (data.success) {
+      floatXP(<?= $lesson['xp_reward'] ?>, btn);
+      showToast('+<?= $lesson['xp_reward'] ?> XP ! Leçon terminée avec succès ! 🎓', 'xp');
+
+      // Update XP counters
+      var hXP   = qs('header-xp');
+      var xpDisp = qs('xp-display');
+      if (hXP)    countUp(hXP,    window.MAZAR_XP, data.new_xp);
+      if (xpDisp) countUp(xpDisp, window.MAZAR_XP, data.new_xp);
+
+      setTimeout(function() {
+        var bar = qs('xp-bar-fill');
+        if (bar) bar.style.width = data.percent + '%';
+      }, 300);
+
+      window.MAZAR_XP    = data.new_xp;
+      window.MAZAR_LEVEL = data.new_level;
+
+      // Final button state
+      btn.className = 'complete-btn-main done';
+      btn.innerHTML = '<i data-lucide="check-circle-2" class="w-5 h-5"></i> Leçon terminée !';
+      btn.disabled  = true;
+      lucide.createIcons();
+
+      var sub = qs('btn-subtext');
+      if (sub) sub.textContent = '✅ +<?= $lesson['xp_reward'] ?> XP gagnés';
+
+      ALREADY_DONE = true;
+
+      if (data.level_up) {
+        setTimeout(function() { showLevelUp(data.new_level); }, 800);
+      }
+
+    } else if (data.message === 'Already completed') {
+      showToast('Cette leçon est déjà marquée comme terminée.', 'info');
+      btn.className = 'complete-btn-main done';
+      btn.innerHTML = '<i data-lucide="check-circle-2" class="w-5 h-5"></i> Leçon terminée !';
+      btn.disabled  = true;
+      lucide.createIcons();
+
+    } else if (data.message === 'too_early') {
+      showToast('⏳ Passez plus de temps sur la leçon ! (' + data.hint + ')', 'error', 4000);
+      btn.innerHTML = orig;
+      btn.disabled  = false;
+      btn.classList.remove('loading');
+
+    } else {
+      showToast('Erreur : ' + (data.message || 'Réessayez.'), 'error');
+      btn.innerHTML = orig;
+      btn.disabled  = false;
       btn.classList.remove('loading');
     }
+
+  } catch (err) {
+    showToast('Erreur de connexion. Vérifiez votre réseau.', 'error');
+    btn.innerHTML = orig;
+    btn.disabled  = false;
+    btn.classList.remove('loading');
   }
+}
+
+/* ── Init ── */
+document.addEventListener('DOMContentLoaded', function() {
+  lucide.createIcons();
+});
+
+/* ── Spin keyframe ── */
+if (!document.getElementById('mazar-spin-style')) {
+  var s = document.createElement('style');
+  s.id = 'mazar-spin-style';
+  s.textContent = '@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
+  document.head.appendChild(s);
+}
 </script>
+
 </body>
 </html>
