@@ -1,5 +1,5 @@
 <?php
-// lang/ar.php — Arabic (RTL)
+// lang/ar.php — Arabic (RTL) — COMPLETE — fixes all missing translation keys
 return [
     // ── General ──
     'site_name'          => 'مازار',
@@ -77,6 +77,28 @@ return [
     'loading_lessons'    => 'جارٍ تحميل الدروس...',
     'no_lessons'         => 'لا توجد دروس متاحة لهذه المادة.',
     'no_subjects'        => 'لا توجد مواد متاحة لمستواك.',
+    'welcome_toast'      => 'مرحباً بك في مازار! ابدأ التعلم الآن. 🎉',
+    'ask_question'       => 'اطرح سؤالاً',
+
+    // ── Achievements ──
+    'unlocked'           => 'مفتوح',
+    'locked'             => 'مقفل',
+    'achievement_1_title'=> 'الخطوة الأولى',
+    'achievement_1_desc' => 'أكمل درسك الأول',
+    'achievement_2_title'=> 'القارئ المجتهد',
+    'achievement_2_desc' => 'أكمل 5 دروس',
+    'achievement_3_title'=> 'في حماس 🔥',
+    'achievement_3_desc' => 'أكمل 10 دروس',
+    'achievement_4_title'=> 'الارتقاء في المستوى',
+    'achievement_4_desc' => 'بلغ المستوى 3',
+    'achievement_5_title'=> 'الخبير',
+    'achievement_5_desc' => 'بلغ المستوى 5',
+    'achievement_6_title'=> 'جامع النقاط',
+    'achievement_6_desc' => 'اجمع 500 نقطة XP',
+    'achievement_7_title'=> 'سيد التعلم',
+    'achievement_7_desc' => 'اجمع 1 000 نقطة XP',
+    'achievement_8_title'=> 'أسطورة مازار 👑',
+    'achievement_8_desc' => 'اجمع 5 000 نقطة XP',
 
     // ── Lesson page ──
     'lesson_progress'    => 'تقدم الدرس',
@@ -99,6 +121,26 @@ return [
     'finish_lesson'      => 'إنهاء الدرس',
     'unlocking'          => 'افتح هذا الزر عن طريق',
     'description'        => 'الوصف',
+    'lesson_completed_label' => 'تم إنهاء الدرس',
+    'replay_btn_label'   => 'مشاهدة الدرس مجدداً',
+    'lesson_progress_card'   => 'تقدم الدرس',
+    'xp_already_earned'  => 'نقاط XP مكتسبة بالفعل',
+    'watch_hint'         => 'شاهد الفيديو',
+    'read_hint'          => 'اقرأ الوثيقة',
+    'page_hint'          => 'ابق في الصفحة',
+    'unlock_hint'        => 'لفتح هذا الزر',
+    'waiting'            => 'في الانتظار...',
+    'ready'              => 'جاهز!',
+    'loading_pdf'        => 'جارٍ تحميل PDF...',
+    'pdf_error'          => 'تعذّر تحميل ملف PDF',
+    'pdf_nav_hint'       => 'استخدم ← → للتنقل بين الصفحات',
+    'secure_doc'         => 'وثيقة آمنة من مازار',
+    'prev_page'          => 'السابق',
+    'next_page'          => 'التالي',
+    'doc_info_hint'      => 'هذا المستند متاح من صفحة الدرس. اقرأه ثم عُد لتحديد الدرس كمكتمل.',
+    'back_label'         => 'رجوع',
+    'questions_count'    => 'أسئلة',
+    'question_singular'  => 'سؤال',
 
     // ── Landing ──
     'hero_title'         => 'تعلّم أفضل. تقدّم أسرع.',

@@ -1,5 +1,5 @@
 <?php
-// lang/en.php — English
+// lang/en.php — English — COMPLETE — fixes all missing translation keys
 return [
     // ── General ──
     'site_name'          => 'MAZAR',
@@ -77,6 +77,28 @@ return [
     'loading_lessons'    => 'Loading lessons...',
     'no_lessons'         => 'No lessons available for this subject.',
     'no_subjects'        => 'No subjects available for your level.',
+    'welcome_toast'      => 'Welcome to MAZAR! Start learning now. 🎉',
+    'ask_question'       => 'Ask a question',
+
+    // ── Achievements ──
+    'unlocked'           => 'Unlocked',
+    'locked'             => 'Locked',
+    'achievement_1_title'=> 'First Step',
+    'achievement_1_desc' => 'Complete your 1st lesson',
+    'achievement_2_title'=> 'Avid Reader',
+    'achievement_2_desc' => 'Complete 5 lessons',
+    'achievement_3_title'=> 'On Fire 🔥',
+    'achievement_3_desc' => 'Complete 10 lessons',
+    'achievement_4_title'=> 'Level Up',
+    'achievement_4_desc' => 'Reach level 3',
+    'achievement_5_title'=> 'Expert',
+    'achievement_5_desc' => 'Reach level 5',
+    'achievement_6_title'=> 'XP Collector',
+    'achievement_6_desc' => 'Accumulate 500 XP',
+    'achievement_7_title'=> 'Learning Master',
+    'achievement_7_desc' => 'Accumulate 1,000 XP',
+    'achievement_8_title'=> 'MAZAR Legend 👑',
+    'achievement_8_desc' => 'Accumulate 5,000 XP',
 
     // ── Lesson page ──
     'lesson_progress'    => 'Lesson Progress',
@@ -99,6 +121,26 @@ return [
     'finish_lesson'      => 'Finish Lesson',
     'unlocking'          => 'Unlock this button by',
     'description'        => 'Description',
+    'lesson_completed_label' => 'Lesson completed',
+    'replay_btn_label'   => 'Replay lesson',
+    'lesson_progress_card'   => 'Lesson Progress',
+    'xp_already_earned'  => 'XP already earned',
+    'watch_hint'         => 'Watch the video',
+    'read_hint'          => 'Read the document',
+    'page_hint'          => 'Stay on the page',
+    'unlock_hint'        => 'to unlock this button',
+    'waiting'            => 'Waiting...',
+    'ready'              => 'Ready!',
+    'loading_pdf'        => 'Loading PDF...',
+    'pdf_error'          => 'Unable to load PDF',
+    'pdf_nav_hint'       => 'Use ← → to navigate between pages',
+    'secure_doc'         => 'MAZAR Secure Document',
+    'prev_page'          => 'Prev.',
+    'next_page'          => 'Next',
+    'doc_info_hint'      => 'This document is accessible from the lesson page. Read it and come back to mark the lesson as complete.',
+    'back_label'         => 'Back',
+    'questions_count'    => 'questions',
+    'question_singular'  => 'question',
 
     // ── Landing ──
     'hero_title'         => 'Learn Smarter. Progress Faster.',

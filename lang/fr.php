@@ -1,5 +1,5 @@
 <?php
-// lang/fr.php — French
+// lang/fr.php — French (COMPLETE — fixes all missing translation keys)
 return [
     // ── General ──
     'site_name'          => 'MAZAR',
@@ -77,6 +77,28 @@ return [
     'loading_lessons'    => 'Chargement des cours...',
     'no_lessons'         => 'Aucun cours disponible pour cette matière.',
     'no_subjects'        => 'Aucune matière disponible pour votre niveau.',
+    'welcome_toast'      => 'Bienvenue sur MAZAR ! Commencez à apprendre. 🎉',
+    'ask_question'       => 'Poser une question',
+
+    // ── Achievements ──
+    'unlocked'           => 'Débloqué',
+    'locked'             => 'Verrouillé',
+    'achievement_1_title'=> 'Premier Pas',
+    'achievement_1_desc' => 'Terminer votre 1er cours',
+    'achievement_2_title'=> 'Lecteur Assidu',
+    'achievement_2_desc' => 'Terminer 5 cours',
+    'achievement_3_title'=> 'En Feu 🔥',
+    'achievement_3_desc' => 'Terminer 10 cours',
+    'achievement_4_title'=> 'Montée en Niveau',
+    'achievement_4_desc' => 'Atteindre le niveau 3',
+    'achievement_5_title'=> 'Expert',
+    'achievement_5_desc' => 'Atteindre le niveau 5',
+    'achievement_6_title'=> 'Collectionneur XP',
+    'achievement_6_desc' => 'Accumuler 500 XP',
+    'achievement_7_title'=> 'Maître de l\'Apprentissage',
+    'achievement_7_desc' => 'Accumuler 1 000 XP',
+    'achievement_8_title'=> 'Légende MAZAR 👑',
+    'achievement_8_desc' => 'Accumuler 5 000 XP',
 
     // ── Lesson page ──
     'lesson_progress'    => 'Progression de la leçon',
@@ -99,6 +121,26 @@ return [
     'finish_lesson'      => 'Terminer la leçon',
     'unlocking'          => 'Déverrouillez ce bouton en',
     'description'        => 'Description',
+    'lesson_completed_label' => 'Leçon terminée',
+    'replay_btn_label'   => 'Revoir la leçon',
+    'lesson_progress_card'   => 'Progression de la leçon',
+    'xp_already_earned'  => 'XP déjà gagnés',
+    'watch_hint'         => 'Regardez la vidéo',
+    'read_hint'          => 'Lisez le document',
+    'page_hint'          => 'Restez sur la page',
+    'unlock_hint'        => 'pour débloquer ce bouton',
+    'waiting'            => 'En attente...',
+    'ready'              => 'Prêt !',
+    'loading_pdf'        => 'Chargement du PDF...',
+    'pdf_error'          => 'Impossible de charger le PDF',
+    'pdf_nav_hint'       => 'Utilisez ← → pour naviguer entre les pages',
+    'secure_doc'         => 'Document sécurisé MAZAR',
+    'prev_page'          => 'Préc.',
+    'next_page'          => 'Suiv.',
+    'doc_info_hint'      => 'Ce document est accessible depuis la page du cours. Lisez-le et revenez marquer la leçon comme terminée.',
+    'back_label'         => 'Retour',
+    'questions_count'    => 'questions',
+    'question_singular'  => 'question',
 
     // ── Landing ──
     'hero_title'         => 'Apprenez mieux. Progressez plus vite.',
@@ -189,6 +231,6 @@ return [
     'ai_placeholder'     => 'Posez votre question éducative…',
     'ai_send'            => 'Envoyer',
     'ai_welcome_title'   => 'Je suis MAZAR AI',
-    'ai_welcome_sub'     => 'Votre assistant éducatif intelligent, dédié à l\'apprentissage sur la plateforme Mazar Education.',
+    'ai_welcome_sub'     => "Votre assistant éducatif intelligent, dédié à l'apprentissage sur la plateforme Mazar Education.",
     'ai_education_badge' => 'Éducation',
 ];
