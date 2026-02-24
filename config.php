@@ -5,14 +5,14 @@
 // ============================================================
 
 // ── Database ─────────────────────────────────────────────────
-define('DB_HOST', 'sql308.infinityfree.com');
-define('DB_NAME', 'if0_41178566_Mazar_test');
-define('DB_USER', 'if0_41178566');
-define('DB_PASS', 'SsXcvXdfpJn');
+define('DB_HOST', 'sql110.hstn.me');
+define('DB_NAME', 'mseet_41230639_mazar');
+define('DB_USER', 'mseet_41230639');
+define('DB_PASS', 'mRHv9d6yWDk2');
 
 // ── Site ─────────────────────────────────────────────────────
 define('SITE_NAME',    'MAZAR');
-define('BASE_URL',     'http://yourdomain.com');   // no trailing slash
+define('BASE_URL',     'https://mazar.zya.me');   // no trailing slash
 define('DEFAULT_LANG', 'fr');
 
 // ── Session key names ─────────────────────────────────────────
