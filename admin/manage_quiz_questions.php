@@ -44,7 +44,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
         $qEn    = trim($_POST['question_en'] ?? '');
         $order  = (int)($_POST['order_num']  ?? 0);
 
-        // Options: option_fr_1..4, option_ar_1..4, option_en_1..4, correct_option (1-4)
         $correct = (int)($_POST['correct_option'] ?? 1);
 
         if (!$qFr) {
@@ -56,7 +55,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
                 $optionsAr[] = trim($_POST["option_ar_{$i}"] ?? '');
                 $optionsEn[] = trim($_POST["option_en_{$i}"] ?? '');
             }
-            // Validate at least 2 options filled
             $filled = count(array_filter($optionsFr));
             if ($filled < 2) {
                 $msg = 'Veuillez remplir au moins 2 options.'; $msgType = 'error';
@@ -93,7 +91,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
             $db->prepare("UPDATE quiz_questions SET question_fr=?, question_ar=?, question_en=?, order_num=? WHERE id=? AND quiz_id=?")
                ->execute([$qFr, $qAr, $qEn, $order, $qId, $quizId]);
 
-            // Delete existing options and re-insert
             $db->prepare("DELETE FROM quiz_options WHERE question_id=?")->execute([$qId]);
             $optionsFr = []; $optionsAr = []; $optionsEn = [];
             for ($i = 1; $i <= 4; $i++) {
@@ -127,7 +124,6 @@ $questionsStmt = $db->prepare(
 $questionsStmt->execute([$quizId]);
 $questions = $questionsStmt->fetchAll();
 
-// Fetch all options keyed by question_id
 $optStmt = $db->prepare(
     "SELECT qo.* FROM quiz_options qo
      JOIN quiz_questions qq ON qq.id = qo.question_id
@@ -199,6 +195,15 @@ require dirname(__DIR__) . '/admin/_layout.php';
 
   <?php foreach($questions as $qi => $q):
     $opts = $allOptions[$q['id']] ?? [];
+    // FIX BUG 2: encode JSON safely into a data attribute to avoid single-quote issues in onclick
+    $questionData = json_encode([
+      'id'          => $q['id'],
+      'question_fr' => $q['question_fr'],
+      'question_ar' => $q['question_ar'],
+      'question_en' => $q['question_en'],
+      'order_num'   => $q['order_num'],
+      'options'     => $opts,
+    ]);
   ?>
   <div class="admin-card overflow-hidden">
     <!-- Question Header -->
@@ -217,14 +222,9 @@ require dirname(__DIR__) . '/admin/_layout.php';
       <div class="flex items-center gap-2">
         <span class="text-gray-400 text-xs">Ordre: <?= $q['order_num'] ?></span>
         <?php if(canEditQuiz()): ?>
-        <button onclick="openEditQuestionModal(<?= json_encode([
-          'id'          => $q['id'],
-          'question_fr' => $q['question_fr'],
-          'question_ar' => $q['question_ar'],
-          'question_en' => $q['question_en'],
-          'order_num'   => $q['order_num'],
-          'options'     => $opts,
-        ]) ?>)"
+        <button
+          data-question="<?= htmlspecialchars($questionData, ENT_QUOTES) ?>"
+          onclick="openEditQuestionModal(JSON.parse(this.dataset.question))"
           class="text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition">
           <i data-lucide="edit-3" class="w-4 h-4"></i>
         </button>
@@ -447,7 +447,6 @@ function openEditQuestionModal(q) {
   document.getElementById('eq-en').value    = q.question_en || '';
   document.getElementById('eq-order').value = q.order_num   || 0;
 
-  // Fill options
   const opts = q.options || [];
   let correctIdx = 1;
   for (let i = 0; i < 4; i++) {
