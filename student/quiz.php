@@ -145,13 +145,12 @@ $userXP      = (int)$_SESSION[SESS_XP];
 $userLevel   = (int)$_SESSION[SESS_LEVEL];
 $progressPct = xpProgressPercent($userXP, $userLevel);
 
-// Shuffle options to prevent memorization (only when not submitted)
-if (!$submitted) {
-    foreach ($allOptions as &$opts) {
-        shuffle($opts);
-    }
-    unset($opts);
-}
+// ── FIX BUG 1: REMOVED shuffle() ──────────────────────────
+// Options are shown in consistent DB order (by id ASC).
+// This ensures the letter (A,B,C,D) assigned during quiz taking
+// matches the letter shown in the results review section.
+// Previously, shuffle() randomized display order but the review
+// used original DB order, causing letter mismatches.
 ?>
 <!DOCTYPE html>
 <html lang="<?= $lang ?>" dir="<?= $dir ?>">
