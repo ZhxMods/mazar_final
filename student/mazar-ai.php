@@ -14,7 +14,7 @@ $userName = $_SESSION[SESS_USERNAME] ?? 'Étudiant';
 $userInitial = mb_strtoupper(mb_substr($userName, 0, 1));
 
 // API key — keep server-side, inject once into JS config
-define('GROQ_API_KEY', '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');
+define('GROQ_API_KEY', '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');
 ?>
 <!DOCTYPE html>
 <html lang="fr" dir="ltr">

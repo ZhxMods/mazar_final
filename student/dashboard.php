@@ -237,6 +237,10 @@ $welcome = isset($_GET['welcome']);
       <i data-lucide="book-open" class="w-5 h-5 flex-shrink-0"></i>
       <span class="text-sm font-medium"><?= t('my_lessons') ?></span>
     </a>
+      <a href="quizzes.php" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition mb-1">
+      <i data-lucide="help-circle" class="w-5 h-5 flex-shrink-0"></i>
+      <span class="text-sm font-medium">Mes Quiz</span>
+    </a>
     <a href="?tab=leaderboard" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition mb-1 <?= $tab==='leaderboard'?'active-tab':'' ?>">
       <i data-lucide="trophy" class="w-5 h-5 flex-shrink-0"></i>
       <span class="text-sm font-medium"><?= t('leaderboard') ?></span>

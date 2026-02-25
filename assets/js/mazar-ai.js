@@ -8,7 +8,7 @@
 
 /* ── Config (injected by PHP via window.MAZAR_AI_CONFIG) ── */
 const GROQ_URL   = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = 'llama-3.3-70b-versatile';
+const GROQ_MODEL = 'meta-llama/llama-prompt-guard-2-86m';
 
 /* ── System Prompt ─────────────────────────────────────── */
 const SYSTEM_PROMPT = `IDENTITY:
