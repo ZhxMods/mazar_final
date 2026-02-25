@@ -30,8 +30,10 @@ $quiz = $quizStmt->fetch();
 if (!$quiz) redirect('manage_quizzes.php');
 
 $pageTitle = 'Questions — ' . htmlspecialchars($quiz['title_fr']);
-$msg       = '';
-$msgType   = 'success';
+// Read flash message set after PRG redirect
+$msg     = $_SESSION['flash_msg']  ?? '';
+$msgType = $_SESSION['flash_type'] ?? 'success';
+unset($_SESSION['flash_msg'], $_SESSION['flash_type']);
 
 // ── Handle POST ───────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
@@ -71,7 +73,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
                        ->execute([$questionId, $optionsFr[$i], $optionsAr[$i], $optionsEn[$i], ($i+1 === $correct) ? 1 : 0]);
                 }
                 logActivity($_SESSION[SESS_USER_ID], 'quiz_question_add', "Added question to quiz #{$quizId}");
-                $msg = 'Question ajoutée avec succès !';
+                $_SESSION['flash_msg']  = 'Question ajoutée avec succès !';
+                $_SESSION['flash_type'] = 'success';
+                redirect("manage_quiz_questions.php?quiz_id={$quizId}");
             }
         }
     }
@@ -104,7 +108,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
                    ->execute([$qId, $optionsFr[$i], $optionsAr[$i], $optionsEn[$i], ($i+1 === $correct) ? 1 : 0]);
             }
             logActivity($_SESSION[SESS_USER_ID], 'quiz_question_edit', "Edited question #{$qId}");
-            $msg = 'Question modifiée.';
+            $_SESSION['flash_msg']  = 'Question modifiée.';
+            $_SESSION['flash_type'] = 'success';
+            redirect("manage_quiz_questions.php?quiz_id={$quizId}");
         }
     }
 
@@ -113,7 +119,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && verifyCsrf()) {
         $qId = (int)($_POST['question_id'] ?? 0);
         $db->prepare("DELETE FROM quiz_questions WHERE id=? AND quiz_id=?")->execute([$qId, $quizId]);
         logActivity($_SESSION[SESS_USER_ID], 'quiz_question_delete', "Deleted question #{$qId}");
-        $msg = 'Question supprimée.';
+        $_SESSION['flash_msg']  = 'Question supprimée.';
+        $_SESSION['flash_type'] = 'success';
+        redirect("manage_quiz_questions.php?quiz_id={$quizId}");
     }
 }
 
